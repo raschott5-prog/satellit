@@ -1,0 +1,260 @@
+{
+  "version": 2,
+  "mode": "radio",
+  "media_dir": null,
+  "fallback": "musik",
+  "audio": {
+    "device": null,
+    "auto_level": true,
+    "volume": 0.5,
+    "crossfade_seconds": 4.0,
+    "wake_seconds": 90.0,
+    "noise_level": 0.006
+  },
+  "announce": {
+    "duck_level": 0.15,
+    "duck_seconds": 0.8,
+    "release_seconds": 1.5,
+    "gain": 1.0,
+    "max_delay_minutes": 10
+  },
+  "stations": [
+    {
+      "id": "musik",
+      "name": "Musik (lokal)",
+      "kind": "folder",
+      "path": "musik",
+      "freq": 90.0
+    },
+    {
+      "id": "kw7205",
+      "name": "Kurzwelle 7205 kHz (Glückstadt)",
+      "kind": "kiwi",
+      "host": "23144.proxy.kiwisdr.com",
+      "freq_khz": 7205,
+      "mode": "am",
+      "freq": 7.205,
+      "gain": 1.2,
+      "fallback": "rg7205"
+    },
+    {
+      "id": "kw5960",
+      "name": "Kurzwelle 5960 kHz (Glückstadt)",
+      "kind": "kiwi",
+      "host": "23144.proxy.kiwisdr.com",
+      "freq_khz": 5960,
+      "mode": "am",
+      "freq": 5.96,
+      "gain": 1.2,
+      "fallback": "rg5960"
+    },
+    {
+      "id": "kw9670",
+      "name": "Kurzwelle 9670 kHz (Glückstadt)",
+      "kind": "kiwi",
+      "host": "23144.proxy.kiwisdr.com",
+      "freq_khz": 9670,
+      "mode": "am",
+      "freq": 9.67,
+      "gain": 1.2,
+      "fallback": "rg9670"
+    },
+    {
+      "id": "kw6070",
+      "name": "Kurzwelle 6070 kHz (Glückstadt)",
+      "kind": "kiwi",
+      "host": "23144.proxy.kiwisdr.com",
+      "freq_khz": 6070,
+      "mode": "am",
+      "freq": 6.07,
+      "gain": 1.2,
+      "fallback": "rg6070"
+    },
+    {
+      "id": "wdr4",
+      "name": "WDR 4",
+      "kind": "stream",
+      "url": "https://wdr-wdr4-live.icecastssl.wdr.de/wdr/wdr4/live/mp3/128/stream.mp3",
+      "freq": 101.3,
+      "gain": 0.8
+    },
+    {
+      "id": "caroline",
+      "name": "Radio Caroline (Stream)",
+      "kind": "stream",
+      "url": "http://sc6.radiocaroline.net:8040/;stream.mp3",
+      "freq": 104.3,
+      "gain": 0.8
+    },
+    {
+      "id": "caroline648",
+      "name": "Radio Caroline 648 kHz (Glückstadt)",
+      "kind": "kiwi",
+      "host": "23144.proxy.kiwisdr.com",
+      "freq_khz": 648,
+      "mode": "am",
+      "freq": 0.648,
+      "gain": 1.2,
+      "fallback": "caroline648r"
+    },
+    {
+      "id": "superfly",
+      "name": "Radio Superfly (Wien)",
+      "kind": "stream",
+      "url": "https://web.stream.superfly.fm/superfly-live?aggregator=Website",
+      "freq": 98.3,
+      "gain": 0.8
+    },
+    {
+      "id": "rg7205",
+      "name": "Kurzwelle 7205 kHz (Rügen)",
+      "kind": "kiwi",
+      "host": "dl8las.proxy.kiwisdr.com",
+      "freq_khz": 7205,
+      "mode": "am",
+      "freq": 7.205,
+      "gain": 1.2
+    },
+    {
+      "id": "rg5960",
+      "name": "Kurzwelle 5960 kHz (Rügen)",
+      "kind": "kiwi",
+      "host": "dl8las.proxy.kiwisdr.com",
+      "freq_khz": 5960,
+      "mode": "am",
+      "freq": 5.96,
+      "gain": 1.2
+    },
+    {
+      "id": "rg9670",
+      "name": "Kurzwelle 9670 kHz (Rügen)",
+      "kind": "kiwi",
+      "host": "dl8las.proxy.kiwisdr.com",
+      "freq_khz": 9670,
+      "mode": "am",
+      "freq": 9.67,
+      "gain": 1.2
+    },
+    {
+      "id": "rg6070",
+      "name": "Kurzwelle 6070 kHz (Rügen)",
+      "kind": "kiwi",
+      "host": "dl8las.proxy.kiwisdr.com",
+      "freq_khz": 6070,
+      "mode": "am",
+      "freq": 6.07,
+      "gain": 1.2
+    },
+    {
+      "id": "caroline648r",
+      "name": "Radio Caroline 648 kHz (Rügen)",
+      "kind": "kiwi",
+      "host": "dl8las.proxy.kiwisdr.com",
+      "freq_khz": 648,
+      "mode": "am",
+      "freq": 0.648,
+      "gain": 1.2
+    }
+  ],
+  "schedule": {
+    "enabled": true,
+    "entries": [
+      {
+        "id": "tag-kw7205",
+        "time": "08:00",
+        "station": "kw7205",
+        "fade": 8,
+        "label": "Kurzwelle am Tag"
+      },
+      {
+        "id": "abend-wdr4",
+        "time": "18:00",
+        "station": "wdr4",
+        "fade": 600,
+        "wake": true,
+        "label": "WDR 4 einblenden"
+      },
+      {
+        "id": "abend-caroline",
+        "time": "19:00",
+        "station": "caroline",
+        "fade": 15
+      },
+      {
+        "id": "abend-caroline648",
+        "time": "20:00",
+        "station": "caroline648",
+        "fade": 15
+      },
+      {
+        "id": "abend-superfly",
+        "time": "21:00",
+        "station": "superfly",
+        "fade": 15
+      },
+      {
+        "id": "abend-aus",
+        "time": "22:00",
+        "action": "sleep",
+        "fade": 600,
+        "label": "ausblenden"
+      }
+    ]
+  },
+  "watcher": {
+    "enabled": false,
+    "poll_seconds": 60.0,
+    "hits_to_switch": 2,
+    "quiet_to_return": 10,
+    "mute_minutes": 30,
+    "detector": "spread",
+    "fixed_dbm": -90.0,
+    "channels": []
+  },
+  "same": {
+    "enabled": false,
+    "sources": [],
+    "fips": [
+      "024031",
+      "051059"
+    ],
+    "events": {
+      "warnings": [
+        "TOR",
+        "SVR",
+        "FFW",
+        "EWW",
+        "SVW"
+      ],
+      "watches": [
+        "TOA",
+        "SVA",
+        "FFA"
+      ],
+      "tests": [
+        "RWT",
+        "RMT",
+        "NPT"
+      ]
+    },
+    "on_test": "log",
+    "fade_seconds": 3.0
+  },
+  "translate": {
+    "enabled": false,
+    "model": "small",
+    "language": null,
+    "beam": 1,
+    "fallback": false,
+    "threads": 0,
+    "min_seconds": 5.0,
+    "max_seconds": 12.0,
+    "min_lang_prob": 0.5,
+    "keep_lines": 50
+  },
+  "web": {
+    "listen": "127.0.0.1",
+    "port": 8080
+  },
+  "ubersdr_uuid": "2b24f0da-bc86-4986-9bb3-d004d2429fe9"
+}

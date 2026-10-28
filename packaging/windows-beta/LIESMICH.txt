@@ -1,0 +1,85 @@
+﻿SATELLIT 0.3 - BETA FÜR WINDOWS
+===============================
+
+Satellit ist ein virtuelles Weltempfänger-Radio: Kurzwelle live über
+öffentliche KiwiSDR-Empfänger, dazu Internet-Radio, Zeitplan und Wecker.
+Bedient wird es im Browser.
+
+
+INSTALLATION
+------------
+
+1. Python 3.10 oder neuer installieren, falls noch nicht vorhanden:
+   https://www.python.org/downloads/
+   WICHTIG: beim Installieren den Haken "Add python.exe to PATH" setzen.
+
+2. Die Zip-Datei entpacken: Rechtsklick auf das Zip -> "Alle extrahieren",
+   z. B. nach "Dokumente". Nicht direkt aus dem Zip heraus starten -
+   dann kann sich Satellit nicht einrichten.
+
+3. Im entpackten Ordner "Satellit-starten.bat" doppelklicken.
+   Beim ersten Mal richtet sich Satellit ein (Internet nötig, 1-3 Minuten).
+   Danach öffnet sich die Oberfläche im Browser: http://localhost:8080
+   Rechts unten in der Taskleiste erscheint ein Satellit-Symbol.
+
+Falls Windows "Der Computer wurde durch Windows geschützt" meldet:
+"Weitere Informationen" -> "Trotzdem ausführen".
+
+
+BEDIENUNG
+---------
+
+- Tagsüber spielt Kurzwelle 7205 kHz über einen KiwiSDR in Glückstadt
+  (Schleswig-Holstein). Die anderen Frequenzen sind in der Oberfläche
+  wählbar. Rauschen, Fading und Pfeifen sind echt - das ist Kurzwelle.
+- Abends läuft ein fester Hörfahrplan (täglich, Register "Hörfahrplan"):
+    18:00  WDR 4, sanft eingeblendet über 10 Minuten
+    19:00  Radio Caroline (Internet-Stream)
+    20:00  Radio Caroline auf Mittelwelle 648 kHz (über den KiwiSDR)
+    21:00  Radio Superfly, Wien
+    22:00  langsames Ausblenden über 10 Minuten
+  Zwischen 22:10 und 8:00 ist Satellit laut Plan still - einfach eine
+  Stationstaste drücken, dann spielt es bis zum nächsten Planeintrag.
+  Die Sender des Abendplans liegen auf den Tasten 5 bis 8.
+- Ist der Empfänger in Glückstadt voll oder offline, springt Satellit
+  automatisch auf dieselbe Frequenz über einen KiwiSDR auf Rügen und
+  später wieder zurück. Rügen ist auch direkt wählbar.
+- Beenden: Rechtsklick auf das Satellit-Symbol in der Taskleiste -> "Beenden".
+- Oberfläche wieder öffnen: Doppelklick auf das Symbol.
+
+
+ÜBERSETZER (OPTIONAL)
+---------------------
+
+Satellit kann mithören, die Sprache erkennen und ins Englische übersetzen.
+Das ist groß (zusammen ca. 600 MB) und deshalb nicht dabei.
+Nachrüsten: "Uebersetzer-nachruesten.bat" doppelklicken (am besten im WLAN),
+Satellit neu starten, in der Oberfläche den Übersetzer einschalten.
+Beim ersten Einschalten wird das Sprachmodell geladen (ca. 460 MB).
+
+
+WENN ETWAS NICHT GEHT
+---------------------
+
+"Satellit-Fehlersuche.bat" starten: Satellit läuft dann mit einem
+Fenster, in dem alle Meldungen stehen. Bitte den Inhalt dieses Fensters
+(oder ein Foto davon) als Meldung (Issue) einstellen unter:
+
+    https://github.com/raschott5-prog/satellit/issues
+
+zusammen mit einer kurzen Beschreibung, was du gemacht hast und was
+passiert ist. Auch Lob, Ideen und "klingt komisch" sind willkommen.
+
+Ein KiwiSDR kann ausgelastet oder offline sein - die Betreiber sind
+Funkamateure, die ihre Empfänger freiwillig teilen. Dann zeigt Satellit
+den Grund an und versucht es später erneut.
+
+
+GUT ZU WISSEN
+-------------
+
+- Einstellungen:  %APPDATA%\Satellit\config.json
+- Musik/Ansagen:  %APPDATA%\Satellit\media\
+- ffmpeg für Internet-Radio ist dabei. Ein eigenes ffmpeg.exe im
+  Unterordner "ffmpeg" neben Satellit-starten.bat wird bevorzugt.
+- Deinstallieren: diesen Ordner und %APPDATA%\Satellit löschen.

@@ -66,3 +66,16 @@ def test_dropout_tail_is_faded_not_cut():
     assert tail[0, 0] > 0.4
     nz = tail[tail[:, 0] != 0, 0]
     assert nz[-1] < 0.05                                 # endet leise
+
+
+def test_ffmpeg_falls_back_to_imageio_outside_linux(monkeypatch):
+    import sys
+    import types
+    from satellit.sources import stream
+    monkeypatch.setattr(stream.shutil, "which", lambda name: None)
+    monkeypatch.setitem(sys.modules, "imageio_ffmpeg",
+                        types.SimpleNamespace(get_ffmpeg_exe=lambda: "/pip/ffmpeg"))
+    monkeypatch.setattr(stream.sys, "platform", "darwin")
+    assert stream.ffmpeg_path() == "/pip/ffmpeg"
+    monkeypatch.setattr(stream.sys, "platform", "linux")
+    assert stream.ffmpeg_path() is None

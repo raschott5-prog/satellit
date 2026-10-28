@@ -1,0 +1,104 @@
+SATELLIT 0.3 - BETA FÜR macOS
+=============================
+
+Satellit ist ein virtuelles Weltempfänger-Radio: Kurzwelle live über
+öffentliche KiwiSDR-Empfänger, dazu Internet-Radio, Zeitplan und Wecker.
+Bedient wird es im Browser. Läuft auf Intel-Macs und Apple Silicon (M1 ...),
+ab macOS 11.
+
+
+INSTALLATION
+------------
+
+1. Python 3.10 oder neuer installieren, falls noch nicht vorhanden:
+   https://www.python.org/downloads/macos/
+   Den "macOS 64-bit universal2 installer" nehmen und durchklicken.
+
+2. Die Zip-Datei doppelklicken - daneben entsteht der Ordner
+   "Satellit-0.3-Beta-Mac". Am besten in den Ordner "Programme" oder
+   "Dokumente" ziehen.
+
+3. Im Ordner "Satellit starten.command" doppelklicken.
+   Beim ersten Mal öffnet sich ein Terminal-Fenster und Satellit richtet
+   sich ein (Internet nötig, 1-3 Minuten). Danach öffnet sich die
+   Oberfläche im Browser: http://localhost:8080
+   Oben rechts in der Menüleiste erscheint ein Satellit-Symbol.
+   Das Terminal-Fenster kann danach geschlossen werden.
+
+macOS blockiert beim ersten Doppelklick, weil Satellit nicht von Apple
+signiert ist ("... wurde nicht geöffnet" bzw. "nicht verifizierter
+Entwickler"). So geht es trotzdem:
+   - macOS 15 und neuer: "Fertig" klicken, dann Systemeinstellungen ->
+     Datenschutz & Sicherheit -> ganz unten bei "Satellit starten.command"
+     auf "Dennoch öffnen" klicken und bestätigen.
+   - ältere macOS: Rechtsklick (Ctrl+Klick) auf die Datei -> "Öffnen" ->
+     noch einmal "Öffnen".
+   Das ist pro .command-Datei einmal nötig.
+
+Für Geübte geht es auch auf einmal im Terminal:
+   xattr -dr com.apple.quarantine ~/Downloads/Satellit-0.3-Beta-Mac
+(Pfad anpassen, falls der Ordner woanders liegt.)
+
+
+BEDIENUNG
+---------
+
+- Tagsüber spielt Kurzwelle 7205 kHz über einen KiwiSDR in Glückstadt
+  (Schleswig-Holstein). Die anderen Frequenzen sind in der Oberfläche
+  wählbar. Rauschen, Fading und Pfeifen sind echt - das ist Kurzwelle.
+- Abends läuft ein fester Hörfahrplan (täglich, Register "Hörfahrplan"):
+    18:00  WDR 4, sanft eingeblendet über 10 Minuten
+    19:00  Radio Caroline (Internet-Stream)
+    20:00  Radio Caroline auf Mittelwelle 648 kHz (über den KiwiSDR)
+    21:00  Radio Superfly, Wien
+    22:00  langsames Ausblenden über 10 Minuten
+  Zwischen 22:10 und 8:00 ist Satellit laut Plan still - einfach eine
+  Stationstaste drücken, dann spielt es bis zum nächsten Planeintrag.
+  Die Sender des Abendplans liegen auf den Tasten 5 bis 8.
+- Ist der Empfänger in Glückstadt voll oder offline, springt Satellit
+  automatisch auf dieselbe Frequenz über einen KiwiSDR auf Rügen und
+  später wieder zurück. Rügen ist auch direkt wählbar.
+- Beenden: Satellit-Symbol in der Menüleiste -> "Beenden".
+- Oberfläche wieder öffnen: Satellit-Symbol -> "Oberfläche öffnen".
+- Der Mac sollte während des Plans nicht in den Ruhezustand gehen
+  (Systemeinstellungen -> Energie bzw. Batterie), sonst schweigt Satellit.
+
+
+ÜBERSETZER (OPTIONAL)
+---------------------
+
+Satellit kann mithören, die Sprache erkennen und ins Englische übersetzen.
+Das ist groß (zusammen ca. 600 MB) und deshalb nicht dabei.
+Nachrüsten: "Uebersetzer nachruesten.command" doppelklicken,
+Satellit neu starten, in der Oberfläche den Übersetzer einschalten.
+Beim ersten Einschalten wird das Sprachmodell geladen (ca. 460 MB).
+
+
+WENN ETWAS NICHT GEHT
+---------------------
+
+"Satellit Fehlersuche.command" starten (vorher Satellit über die
+Menüleiste beenden): Satellit läuft dann im Terminal-Fenster, in dem alle
+Meldungen stehen. Bitte den Inhalt dieses Fensters (oder ein Foto davon)
+als Meldung (Issue) einstellen unter:
+
+    https://github.com/raschott5-prog/satellit/issues
+
+zusammen mit einer kurzen Beschreibung, was du gemacht hast und was
+passiert ist. Auch Lob, Ideen und "klingt komisch" sind willkommen.
+
+Ein KiwiSDR kann ausgelastet oder offline sein - die Betreiber sind
+Funkamateure, die ihre Empfänger freiwillig teilen. Dann zeigt Satellit
+den Grund an und versucht es später erneut.
+
+
+GUT ZU WISSEN
+-------------
+
+- Einstellungen:  ~/Library/Application Support/Satellit/config.json
+- Musik/Ansagen:  ~/Library/Application Support/Satellit/media/
+- Protokoll:      ~/Library/Application Support/Satellit/satellit.log
+- ffmpeg für Internet-Radio ist dabei. Wer schon eines über Homebrew
+  hat (brew install ffmpeg), dessen wird bevorzugt benutzt.
+- Deinstallieren: diesen Ordner und
+  ~/Library/Application Support/Satellit löschen.

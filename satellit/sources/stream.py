@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 import time
 from urllib.parse import urlparse
 
@@ -22,7 +23,19 @@ _READ = 8192  # float32-Werte pro Lesevorgang
 
 
 def ffmpeg_path() -> str | None:
-    return shutil.which("ffmpeg")
+    """ffmpeg im PATH, sonst (macOS/Windows) das aus dem pip-Paket imageio-ffmpeg.
+
+    Unter Linux nicht: dessen statisches ffmpeg stürzt bei der Namensauflösung
+    ab, und ein System-ffmpeg ist dort ohnehin üblich.
+    """
+    exe = shutil.which("ffmpeg")
+    if exe or sys.platform.startswith("linux"):
+        return exe
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
 
 
 def resolve_playlist(url: str, timeout: float = 8.0) -> str:

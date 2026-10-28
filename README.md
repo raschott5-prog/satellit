@@ -57,6 +57,12 @@ meldet das.
 Kurz: `run-satellit.bat` doppelklicken, oder mit PyInstaller ein
 eigenständiges `Satellit.exe` bauen (`pyinstaller satellit.spec`).
 
+**macOS** (Intel und Apple Silicon): `run-satellit.sh` funktioniert wie unter
+Linux. Für Tester gibt es ein Beta-Paket mit `Satellit starten.command`
+zum Doppelklicken (Vorlage in [`packaging/mac-beta/`](packaging/mac-beta/)).
+ffmpeg muss nicht installiert sein: Fehlt es im PATH, nimmt Satellit unter
+macOS und Windows das aus dem pip-Paket `imageio-ffmpeg`.
+
 Optionen:
 
 | Option | Zweck |
@@ -69,7 +75,8 @@ Optionen:
 | `--mode program` | Programm-Oberfläche (Standard: `radio`) |
 
 Die Konfiguration liegt unter `%APPDATA%\Satellit\config.json` (Windows) bzw.
-`~/.config/satellit/config.json` (Linux) und wird über die Oberfläche
+`~/.config/satellit/config.json` (Linux) bzw.
+`~/Library/Application Support/Satellit/config.json` (macOS) und wird über die Oberfläche
 bearbeitet. Die mitgelieferten Beispiel-Sender zeigen nur das Format – echte
 Stream-URLs und Empfänger trägt man selbst ein.
 
@@ -246,7 +253,7 @@ python tests/fake_kiwi.py --port 18073 [--active]      # KiwiSDR-Attrappe
 python tests/fake_same.py --event TOR --fips 024031 --out tor.wav   # SAME-WAV
 ```
 
-Die Suite (116 Tests) läuft ohne Netz, Soundkarte oder optionale Pakete: der
+Die Suite (117 Tests) läuft ohne Netz, Soundkarte oder optionale Pakete: der
 SAME-Round-Trip inklusive Best-of-3 unter Rauschen, Mixer/Begrenzer, Fahrplan,
 Konfiguration, Ringpuffer, die Prioritätsleiter der Engine, die Web-API sowie
 im Programm-Modus Dateiquellen, Wochenplan, alle Einspielungs-Regeln
