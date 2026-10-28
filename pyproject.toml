@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "satellit"
+version = "0.3.0"
+description = "Virtuelles Weltempfänger-Radio: UKW-Stream, KiwiSDR/UberSDR, Hörfahrplan, SAME-Wache, Übersetzer"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Robert" }]
+dependencies = ["numpy>=1.23", "requests>=2.28"]
+
+[project.optional-dependencies]
+audio = ["sounddevice>=0.4"]
+sdr = ["websocket-client>=1.5", "opuslib>=3.0"]
+tray = ["pystray>=0.19", "Pillow>=9.0"]
+translate = ["faster-whisper>=1.0"]
+all = ["sounddevice>=0.4", "websocket-client>=1.5", "opuslib>=3.0",
+       "pystray>=0.19", "Pillow>=9.0"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+satellit = "satellit.__main__:main"
+
+[tool.setuptools]
+packages = ["satellit", "satellit.sources"]
+
+[tool.setuptools.package-data]
+satellit = ["../static/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

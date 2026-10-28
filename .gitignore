@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.json.bad
+*.tmp
+build/
+dist/
+*.spec.bak
+ffmpeg/
+*.wav
+.venv/
+.pytest_cache/

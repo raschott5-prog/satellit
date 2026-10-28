@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SATELLIT – World Receiver</title>
+<style>
+:root{
+  --case:#16171a; --case2:#22242a; --alu1:#d9dbde; --alu2:#a9adb3; --alu3:#7d8288;
+  --scale-bg:#0b0d10; --scale-ink:#e9e4d6; --scale-dim:#8d887c;
+  --fm:#e2b33c; --sw:#d9534f; --mw:#5aa9e6; --lw:#7cc27a;
+  --pointer:#ff3b2f; --lcd-bg:#1f2a1c; --lcd-ink:#c8f07a; --lcd-dim:#4c6a32;
+  --page:#2c2f35; --text:#e8e8e8; --muted:#9aa0a8; --panel:#1c1e22; --line:#33363d;
+  --accent:#e2b33c; --warn:#ff6b4a; --ok:#7ddf7d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:radial-gradient(ellipse at top,#3a3e45,#1d1f23 70%) fixed;color:var(--text);
+  font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100%}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 60px}
+
+/* ---------- Gehäuse ---------- */
+.radio{background:linear-gradient(#26282d,#121316);border-radius:18px;padding:0 0 22px;
+  box-shadow:0 30px 60px #0009,inset 0 1px 0 #ffffff14;overflow:hidden}
+.topbar{height:46px;background:linear-gradient(#eceef0,var(--alu2) 60%,var(--alu3));
+  display:flex;align-items:center;justify-content:space-between;padding:0 22px;
+  border-bottom:2px solid #000}
+.brand{font:700 15px/1 system-ui;letter-spacing:.35em;color:#2b2d31;text-transform:uppercase;white-space:nowrap}
+.brand small{letter-spacing:.15em;font-weight:500;color:#55595f;margin-left:10px}
+.grille{flex:1;height:18px;margin:0 26px;border-radius:9px;
+  background:repeating-linear-gradient(90deg,#55585e 0 2px,transparent 2px 6px);opacity:.55}
+.led{width:10px;height:10px;border-radius:50%;background:#3a1010;box-shadow:inset 0 1px 2px #000;flex:none}
+.led.on{background:#ff4b3a;box-shadow:0 0 8px #ff4b3a}
+.led.alert{background:#ffb400;box-shadow:0 0 10px #ffb400;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+
+.front{display:grid;grid-template-columns:1fr 330px;gap:20px;padding:20px 22px 0}
+@media (max-width:900px){.front{grid-template-columns:1fr}}
+
+/* ---------- Tragegriffe ---------- */
+.cabinet{position:relative;padding:0 54px}
+.handle{position:absolute;top:34px;bottom:34px;width:58px;cursor:grab;z-index:1}
+.handle.l{left:0}.handle.r{right:0;transform:scaleX(-1)}
+.handle .grip{position:absolute;left:4px;top:0;bottom:0;width:22px;border-radius:11px;
+  background:linear-gradient(90deg,#6f747b 0%,#f4f5f6 28%,#c3c7cc 45%,#8a8f96 70%,#e9ebed 88%,#7a7f86 100%);
+  box-shadow:-4px 8px 14px #0009,inset 0 0 0 1px #0004}
+.handle .grip::after{content:"";position:absolute;left:3px;right:3px;top:28%;bottom:28%;border-radius:8px;
+  background:repeating-linear-gradient(#0000 0 5px,#0003 5px 7px)}
+.handle .arm{position:absolute;left:18px;width:42px;height:30px;border-radius:6px 14px 14px 6px;
+  background:linear-gradient(#e7e9eb,#a3a8ae 55%,#6c7178);box-shadow:0 6px 10px #0008,inset 0 1px 0 #fff8}
+.handle .arm.t{top:12px}.handle .arm.b{bottom:12px}
+.handle .arm::after{content:"";position:absolute;right:9px;top:50%;width:9px;height:9px;margin-top:-4.5px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff,#777 70%);box-shadow:inset 0 0 0 1px #0006}
+.handle:active{cursor:grabbing}
+.cabinet.lift .radio,.cabinet.lift .handle{animation:lift .9s cubic-bezier(.3,.6,.3,1)}
+@keyframes lift{0%{transform:none}30%{transform:translateY(-14px) rotate(-1.2deg)}55%{transform:translateY(-10px) rotate(.8deg)}100%{transform:none}}
+.cabinet.lift .handle.r{animation-name:liftr}
+@keyframes liftr{0%{transform:scaleX(-1)}30%{transform:scaleX(-1) translateY(-14px) rotate(1.2deg)}55%{transform:scaleX(-1) translateY(-10px) rotate(-.8deg)}100%{transform:scaleX(-1)}}
+@media (max-width:700px){.cabinet{padding:0 30px}.handle{width:34px}.handle .grip{width:14px;left:2px}.handle .arm{left:10px;width:26px;height:22px}
+  .brand small{display:none}.grille{margin:0 14px}}
+
+/* ---------- Skala ---------- */
+.scale{background:var(--scale-bg);border-radius:8px;padding:12px 16px 10px;position:relative;
+  box-shadow:inset 0 3px 12px #000,0 0 0 2px #2d3036;user-select:none}
+.row{position:relative;height:46px;cursor:pointer}
+.row + .row{border-top:1px solid #1e2228}
+.row .lbl{position:absolute;left:0;top:6px;font:700 12px/1 system-ui;letter-spacing:.1em;width:34px}
+.row svg{position:absolute;left:40px;right:0;top:0;height:100%;width:calc(100% - 40px);overflow:visible}
+.row.active .lbl{text-shadow:0 0 6px currentColor}
+.row:not(.active){opacity:.6}
+.stmark{cursor:pointer}
+.stmark.on circle{stroke:#fff;stroke-width:2}
+.pointer{position:absolute;top:6px;bottom:6px;width:2px;background:var(--pointer);
+  box-shadow:0 0 8px var(--pointer);transition:left 1.2s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.scale-foot{display:flex;justify-content:space-between;gap:12px;color:var(--scale-dim);font-size:11px;
+  margin-top:6px;padding-left:40px}
+
+/* ---------- LCD ---------- */
+.lcd{background:linear-gradient(var(--lcd-bg),#172015);border-radius:8px;padding:12px 14px;
+  box-shadow:inset 0 2px 10px #000,0 0 0 2px #2d3036;color:var(--lcd-ink);
+  font-family:"DSEG7 Classic","Share Tech Mono",ui-monospace,Consolas,monospace;position:relative;min-width:0}
+.lcd .top{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--lcd-dim)}
+.lcd .top b{color:var(--lcd-ink);font-weight:400}
+.lcd .freq{font-size:46px;letter-spacing:.04em;text-align:right;line-height:1.1;margin:6px 0 2px;
+  text-shadow:0 0 6px #c8f07a55}
+.lcd .unit{font-size:16px;margin-left:6px}
+.lcd .name{font-size:18px;min-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcd .sub{font-size:12px;color:var(--lcd-dim);min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcd .sub.plan{color:var(--lcd-ink);opacity:.8}
+.meter{display:flex;gap:3px;align-items:flex-end;height:18px;margin-top:8px}
+.meter i{flex:1;background:var(--lcd-dim);opacity:.35;border-radius:1px}
+.meter i.on{background:var(--lcd-ink);opacity:1}
+.lcd .alertline{display:none;margin-top:8px;color:#ffd24a;font-size:13px}
+.lcd.alert .alertline{display:block;animation:blink 1.2s infinite}
+.lcd.muted .freq,.lcd.muted .name{opacity:.45}
+
+/* ---------- Bedienteil ---------- */
+.controls{display:grid;grid-template-columns:1fr auto;gap:18px;padding:18px 22px 0;align-items:center}
+@media (max-width:900px){.controls{grid-template-columns:1fr}}
+.presets{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+@media (max-width:600px){.presets{grid-template-columns:repeat(4,minmax(0,1fr))}#foot-left{display:none}.mlabel,.odd{display:none}}
+.key{appearance:none;border:0;border-radius:6px;padding:10px 4px 8px;cursor:pointer;color:#1b1c1f;
+  background:linear-gradient(#f2f3f4,var(--alu2));box-shadow:0 3px 0 #555a61,0 4px 6px #0008;
+  font:600 12px/1.2 system-ui;transition:transform .05s;min-height:52px}
+.key small{display:block;font-weight:500;color:#45484d;font-size:11px;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.key:active,.key.down{transform:translateY(2px);box-shadow:0 1px 0 #555a61,0 2px 3px #0008}
+.key.down{background:linear-gradient(#d6d8db,#9da1a7)}
+.key:disabled{opacity:.35;cursor:default}
+.key.dark{background:linear-gradient(#3a3d43,#24262a);color:#ddd;box-shadow:0 3px 0 #0a0b0c,0 4px 6px #0008}
+.key.dark small{color:#999}
+.key.dark.down{background:linear-gradient(#5a2a24,#3a1a16);color:#ffb3a8}
+.right{display:flex;gap:14px;align-items:center;justify-content:flex-end}
+.knob{width:86px;height:86px;border-radius:50%;position:relative;cursor:grab;touch-action:none;
+  background:conic-gradient(from 0deg,#c9ccd0,#8f949a,#e4e6e8,#8f949a,#c9ccd0,#8f949a,#e4e6e8,#8f949a,#c9ccd0);
+  box-shadow:0 6px 12px #000a,inset 0 0 0 6px #ffffff10}
+.knob::after{content:"";position:absolute;inset:14px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#eef0f2,#9ea3a9);box-shadow:inset 0 2px 4px #0005}
+.knob .mark{position:absolute;left:50%;top:7px;width:3px;height:16px;margin-left:-1.5px;
+  background:#d33;border-radius:2px;z-index:2;transform-origin:50% 36px}
+.knob:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.knoblabel{text-align:center;font-size:11px;color:var(--muted);letter-spacing:.15em;margin-top:6px}
+
+.alertbar{display:none;margin:14px 22px 0;background:#3b2a00;border:1px solid #ffb400;color:#ffd977;
+  border-radius:8px;padding:10px 14px;justify-content:space-between;align-items:center;gap:12px}
+.alertbar.show{display:flex}
+
+/* ---------- Register ---------- */
+.panel{margin-top:22px;background:var(--panel);border-radius:12px;border:1px solid var(--line)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 10px;overflow-x:auto}
+.tabs button{background:none;border:0;color:var(--muted);padding:12px 14px;cursor:pointer;
+  font:600 14px system-ui;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--text);border-color:var(--accent)}
+.tabs .badge{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-left:6px;vertical-align:middle;visibility:hidden}
+.tabs .badge.on{visibility:visible;box-shadow:0 0 6px var(--ok)}
+.tab{display:none;padding:16px}
+.tab.on{display:block}
+.btn{background:#2d3138;color:var(--text);border:1px solid #444a53;border-radius:6px;padding:7px 12px;
+  cursor:pointer;font:600 13px system-ui;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--accent);color:#1b1b1b;border-color:var(--accent)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+.status{font-size:13px;color:var(--muted)} .status.on{color:var(--ok)}
+select{background:#121316;color:var(--text);border:1px solid #3a3e46;border-radius:6px;padding:6px 8px;font:14px system-ui}
+ul.list{list-style:none;margin:0;padding:0}
+ul.list li{padding:7px 0;border-top:1px solid var(--line);display:flex;gap:10px;align-items:baseline}
+ul.list li:first-child{border-top:0}
+.t{font:12px/1 ui-monospace,Consolas,monospace;color:var(--muted);flex:none}
+.small{font-size:12px;color:var(--muted)}
+.chip{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.chip.hit{color:#ffd24a;border-color:#ffd24a}
+.cur{color:var(--accent)}
+
+/* Übersetzer */
+.lines{max-height:360px;overflow:auto}
+.lines li .lang{flex:none;font:11px/1.6 ui-monospace,monospace;padding:0 7px;border-radius:999px;
+  border:1px solid var(--lcd-dim);color:var(--lcd-ink);background:#172015}
+.lines li .lang.plan{border-color:var(--lcd-ink)}
+.lines li.unsure{opacity:.55} .lines li.unsure .lang{border-style:dashed}
+.lines li .txt{flex:1}
+.lines li .src{flex:none;font-size:11px;color:var(--muted);max-width:30%;text-align:right}
+
+/* Senderknöpfe */
+.stations{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.st{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;
+  background:#24272c;border:1px solid var(--line);text-align:left;color:var(--text);font:inherit}
+.st:hover{border-color:var(--alu3)}
+.st.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.st .dot{width:8px;height:8px;border-radius:50%;background:#555;flex:none}
+.st.play .dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.st.err .dot{background:var(--warn)} .st.conn .dot{background:var(--accent)}
+.st .nm{font-weight:600;font-size:14px}
+.st .sub{font-size:11px;color:var(--muted)}
+.st .sub.air{color:var(--lcd-ink);opacity:.75}
+.st .kind{margin-left:auto;font:10px/1 ui-monospace,monospace;color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;
+  padding:10px 16px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:5}
+.toast.show{opacity:1}
+footer{margin-top:14px;color:var(--muted);font-size:12px;text-align:center}
+footer a{color:var(--accent)}
+/* Handy: Sendername der Übersetzung in eigene Zeile (muss nach den Grundregeln stehen) */
+@media (max-width:600px){.lines li{flex-wrap:wrap}.lines li .txt{flex-basis:calc(100% - 120px)}
+  .lines li .src{max-width:none;width:100%;text-align:left}}
+</style>
+</head>
+<body>
+<main>
+  <div class="cabinet" id="cabinet">
+  <div class="handle l" title="Tragegriff – nicht aus dem Fenster werfen"><div class="arm t"></div><div class="arm b"></div><div class="grip"></div></div>
+  <div class="handle r" title="Tragegriff – nicht aus dem Fenster werfen"><div class="arm t"></div><div class="arm b"></div><div class="grip"></div></div>
+  <section class="radio" aria-label="Radio">
+    <div class="topbar">
+      <div class="brand">Satellit<small>World Receiver</small></div>
+      <div class="grille"></div>
+      <div class="led" id="led" title="Betrieb"></div>
+    </div>
+
+    <div class="front">
+      <div class="scale" id="scale">
+        <div class="pointer" id="pointer" style="left:50%"></div>
+        <!-- Zeilen werden per JS gezeichnet -->
+        <div class="scale-foot"><span id="foot-left">Klick auf einen Sender auf der Skala zum Einschalten</span><span id="foot-right"></span></div>
+      </div>
+
+      <div class="lcd" id="lcd">
+        <div class="top"><span id="lcd-band">—</span><span id="lcd-mode"></span><b id="lcd-clock">--:--</b></div>
+        <div class="freq"><span id="lcd-freq">-----</span><span class="unit" id="lcd-unit"></span></div>
+        <div class="name" id="lcd-name">—</div>
+        <div class="sub" id="lcd-sub">&nbsp;</div>
+        <div class="sub plan" id="lcd-plan" title="laut Sendeplan der HFCC">&nbsp;</div>
+        <div class="meter" id="meter" title="S-Meter"></div>
+        <div class="alertline" id="lcd-alert"></div>
+      </div>
+    </div>
+
+    <div class="alertbar" id="alertbar">
+      <span id="alerttext"></span>
+      <button class="btn" id="dismiss">Zurück zum Programm</button>
+    </div>
+
+    <div class="controls">
+      <div class="presets" id="presets"></div>
+      <div class="right">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="key dark" id="btn-mute" style="min-height:38px;padding:8px 14px">STUMM<small id="mute-txt">aus</small></button>
+          <button class="key dark" id="btn-back" style="min-height:38px;padding:8px 14px" title="Zurück zum Hörfahrplan">PROGRAMM</button>
+        </div>
+        <div>
+          <div class="knob" id="knob" role="slider" aria-label="Lautstärke" aria-valuemin="0" aria-valuemax="100" tabindex="0"><div class="mark" id="knobmark"></div></div>
+          <div class="knoblabel">VOLUME</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <section class="panel">
+    <div class="tabs" role="tablist">
+      <button class="on" data-tab="translate">Übersetzer<span class="badge" id="tr-badge"></span></button>
+      <button data-tab="stations">Sender</button>
+      <button data-tab="schedule">Hörfahrplan</button>
+      <button data-tab="watch">Wache</button>
+      <button data-tab="same">SAME</button>
+      <button data-tab="log">Ereignisse</button>
+    </div>
+
+    <div class="tab on" id="tab-translate">
+      <div class="bar">
+        <button class="btn primary" id="tr-toggle">Einschalten</button>
+        <button class="btn" id="tr-clear" title="Liste leeren">Leeren</button>
+        <label class="small" title="small schafft Echtzeit; medium übersetzt genauer, ist hier aber etwa doppelt zu langsam und überspringt dann Abschnitte">Modell
+          <select id="tr-model"></select></label>
+        <span class="status" id="tr-status">—</span>
+      </div>
+      <div class="lines"><ul class="list" id="tr-lines"></ul></div>
+    </div>
+
+    <div class="tab" id="tab-stations">
+      <p class="hint">Grüner Punkt = Empfang läuft, gelb = verbindet, rot = gestört (Grund steht darunter).
+        Fällt ein Sender aus, springt Satellit auf seinen Ersatz und später zurück.</p>
+      <div class="stations" id="stations"></div>
+    </div>
+
+    <div class="tab" id="tab-schedule">
+      <p class="hint">Es gilt immer der zuletzt begonnene Eintrag. Von Hand umschalten gilt bis zum nächsten Eintrag.
+        Bearbeiten in der <a href="/programm" class="toProg" style="color:var(--accent)">Programm-Ansicht</a>.</p>
+      <ul class="list" id="sched"></ul>
+    </div>
+
+    <div class="tab" id="tab-watch">
+      <p class="hint">Die Wache hört in Abständen kurz auf den Kanälen rein und schaltet um, wenn dort Betrieb ist.
+        Jede Abfrage belegt kurz einen Platz auf einem fremden KiwiSDR.</p>
+      <ul class="list" id="watch"></ul>
+    </div>
+
+    <div class="tab" id="tab-same">
+      <p class="hint" id="fips">Gebiet: —</p>
+      <div class="bar">
+        <select id="same-ev">
+          <option value="RWT">RWT – Wochentest</option>
+          <option value="TOR">TOR – Tornadowarnung</option>
+          <option value="SVR">SVR – schweres Gewitter</option>
+          <option value="FFW">FFW – Sturzflut</option>
+          <option value="EAN">EAN – nationaler Notfall</option>
+        </select>
+        <button class="btn" id="same-test">Test-Alarm einspeisen</button>
+      </div>
+      <ul class="list" id="same-rec"></ul>
+    </div>
+
+    <div class="tab" id="tab-log"><ul class="list" id="events"></ul></div>
+  </section>
+
+  <footer><span id="foot">Satellit</span> ·
+    <a href="/programm" class="toProg">Programm-Ansicht</a> ·
+    <a href="/static/schlicht.html">schlichte Ansicht</a></footer>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const BANDS = [
+  {id:"UKW", lo:87500, hi:108000, color:"var(--fm)", major:2000, minor:500, fmt:f=>(f/1000).toFixed(0)},
+  {id:"KW", lo:1711, hi:30000, color:"var(--sw)", major:5000, minor:1000, fmt:f=>(f/1000).toFixed(0),
+   marks:[["",2300,2495],["",3200,3400],["",3900,4000],["60m",4750,5060],["49m",5900,6200],["41m",7200,7450],
+          ["31m",9400,9900],["25m",11600,12100],["22m",13570,13870],["19m",15100,15800],["16m",17480,17900],["13m",21450,21850],["11m",25670,26100]]},
+  {id:"MW", lo:520, hi:1710, color:"var(--mw)", major:100, minor:10, fmt:f=>f, labelEvery:200},
+  {id:"LW", lo:148.5, hi:283.5, color:"var(--lw)", major:20, minor:5, fmt:f=>f, labelEvery:20},
+];
+const REASON = {"Zeitplan":"FAHRPLAN","Hand":"HAND","Wache":"WACHE","SAME":"SAME","Ersatz":"ERSATZ","Schlummern":"SCHLUMMERN"};
+let cfg = {stations:[]}, state = null;
+
+async function api(path, body){
+  const r = await fetch(path, body===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j = await r.json();
+  if (j && j.ok === false) throw new Error(j.error || "Fehler");
+  return j;
+}
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
+function esc(t){ return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+// 0.3 speichert "freq" in MHz, Kiwi/UberSDR zusätzlich "freq_khz"
+function khz(s){ return s.freq_khz!=null ? +s.freq_khz : (s.freq!=null ? s.freq*1000 : null); }
+function bandOf(f){ for(const b of BANDS) if(f>=b.lo && f<=b.hi) return b.id; return f>=87500?"UKW":"KW"; }
+function pct(b,f){ return (f-b.lo)/(b.hi-b.lo)*100; }
+function onScale(){ return cfg.stations.filter(s=>khz(s)!=null); }
+function activeStation(){
+  const label=state?.playing?.label;
+  return cfg.stations.find(s=>s.name===label) || null;
+}
+
+/* ------------------------------------------------------------ Skala */
+function drawScale(){
+  const scale=$("#scale");
+  scale.querySelectorAll(".row").forEach(r=>r.remove());
+  const foot=scale.querySelector(".scale-foot");
+  for (const b of BANDS){
+    const row=document.createElement("div");
+    row.className="row"; row.dataset.band=b.id;
+    const lbl=document.createElement("div"); lbl.className="lbl"; lbl.textContent=b.id; lbl.style.color=b.color;
+    row.appendChild(lbl);
+    const svg=document.createElementNS("http://www.w3.org/2000/svg","svg"); svg.setAttribute("preserveAspectRatio","none");
+    let s=`<line x1="0%" x2="100%" y1="20" y2="20" stroke="${b.color}" stroke-width="2" opacity=".8"/>`;
+    if (b.marks) for (const [n,lo,hi] of b.marks){
+      s+=`<rect x="${pct(b,lo)}%" y="16" width="${Math.max(pct(b,hi)-pct(b,lo),.4)}%" height="8" fill="${b.color}" opacity=".9"/>`;
+      if(n) s+=`<text class="mlabel" x="${pct(b,(lo+hi)/2)}%" y="12" fill="var(--scale-dim)" font-size="9" text-anchor="middle">${n}</text>`;
+    }
+    const start=Math.ceil(b.lo/b.minor)*b.minor;
+    let nth=0;    // jede zweite Zahl bekommt "odd" – am Handy ausgeblendet
+    for (let f=start; f<=b.hi; f+=b.minor){
+      const major=Math.abs(f % b.major) < 1e-6, x=pct(b,f);
+      s+=`<line x1="${x}%" x2="${x}%" y1="20" y2="${major?30:25}" stroke="var(--scale-ink)" stroke-width="${major?1.2:.6}" opacity="${major?.9:.45}"/>`;
+      const every=b.labelEvery || b.major;
+      if ((!b.marks && Math.abs(f % every) < 1e-6) || (b.marks && major))
+        s+=`<text${nth++%2?' class="odd"':""} x="${x}%" y="42" fill="var(--scale-ink)" font-size="10" text-anchor="middle">${b.fmt(f)}</text>`;
+    }
+    // Sender als Punkte; gleiche Frequenz (z. B. zwei Kiwis) = ein Punkt, alle Namen im Tooltip
+    const groups={};
+    for (const st of onScale()) if (bandOf(khz(st))===b.id) (groups[khz(st)] ||= []).push(st);
+    for (const [f,sts] of Object.entries(groups)){
+      s+=`<g class="stmark" data-ids="${esc(sts.map(x=>x.id).join(" "))}"><title>${esc(sts.map(x=>x.name).join("\n"))}</title>
+          <circle cx="${pct(b,+f)}%" cy="20" r="4.5" fill="${b.color}" stroke="#000" stroke-width="1"/></g>`;
+    }
+    svg.innerHTML=s;
+    row.appendChild(svg);
+    row.addEventListener("click", ev=>{
+      const rect=svg.getBoundingClientRect();
+      const f=b.lo+(ev.clientX-rect.left)/rect.width*(b.hi-b.lo);
+      const cands=onScale().filter(s=>bandOf(khz(s))===b.id);
+      if(!cands.length){ toast(`Auf ${b.id} ist noch kein Sender eingetragen`); return; }
+      const near=cands.reduce((a,c)=>Math.abs(khz(c)-f)<Math.abs(khz(a)-f)?c:a);
+      tune(near.id);
+    });
+    scale.insertBefore(row, foot);
+  }
+}
+
+function placePointer(st){
+  const p=$("#pointer");
+  const f=st && khz(st);
+  document.querySelectorAll(".row").forEach(r=>r.classList.toggle("active", f!=null && r.dataset.band===bandOf(f)));
+  document.querySelectorAll(".stmark").forEach(m=>m.classList.toggle("on", !!st && m.dataset.ids.split(" ").includes(st.id)));
+  if(f==null){ p.style.opacity=.25; return; }
+  p.style.opacity=1;
+  const b=BANDS.find(x=>x.id===bandOf(f));
+  const row=document.querySelector(`.row[data-band="${b.id}"] svg`);
+  const sr=$("#scale").getBoundingClientRect(), rr=row.getBoundingClientRect();
+  p.style.left=(rr.left - sr.left + rr.width*pct(b,f)/100)+"px";
+}
+
+/* ------------------------------------------------------------ Tasten & Knopf */
+// Stationstasten: die ersten 8 Sender (ohne den allgemeinen Ersatz, meist "Musik")
+function presetStations(){ return cfg.stations.filter(s=>s.id!==cfg.fallback).slice(0,8); }
+function shortName(s){ return s.name.replace(/^Kurzwelle\s+/,"").replace(/\s*kHz\s*/," "); }
+function drawPresets(){
+  const box=$("#presets"); box.innerHTML="";
+  const list=presetStations();
+  for (let i=0;i<8;i++){
+    const st=list[i];
+    const b=document.createElement("button"); b.className="key";
+    b.innerHTML=`${i+1}<small>${st?esc(shortName(st)):"–"}</small>`;
+    if(st){ b.title=st.name; b.dataset.id=st.id; b.onclick=()=>tune(st.id); } else b.disabled=true;
+    box.appendChild(b);
+  }
+}
+async function tune(id){ try{ await api("/api/tune",{station:id}); poll(); }catch(e){ toast(e.message); } }
+$("#btn-mute").onclick=async()=>{ await api("/api/mute",{muted:!state?.muted}); poll(); };
+$("#btn-back").onclick=async()=>{ await api("/api/back",{}); poll(); toast("Zurück zum Hörfahrplan"); };
+$("#dismiss").onclick=async()=>{ await api("/api/back",{}); poll(); };
+
+let vol=0.5, volTimer=null, volTouched=0;
+function setKnob(v){ $("#knobmark").style.transform=`rotate(${-135+v*270}deg)`; $("#knob").setAttribute("aria-valuenow",Math.round(v*100)); }
+function sendVol(){ volTouched=Date.now(); clearTimeout(volTimer); volTimer=setTimeout(()=>api("/api/volume",{value:vol}),80); }
+(function(){
+  const k=$("#knob"); let dragging=false, y0=0, v0=0;
+  k.addEventListener("pointerdown",e=>{dragging=true;y0=e.clientY;v0=vol;k.setPointerCapture(e.pointerId)});
+  k.addEventListener("pointermove",e=>{ if(!dragging) return; vol=Math.min(1,Math.max(0,v0+(y0-e.clientY)/200)); setKnob(vol); sendVol(); });
+  k.addEventListener("pointerup",()=>dragging=false);
+  k.addEventListener("wheel",e=>{e.preventDefault(); vol=Math.min(1,Math.max(0,vol-Math.sign(e.deltaY)*0.03)); setKnob(vol); sendVol();},{passive:false});
+  k.addEventListener("keydown",e=>{ if(["ArrowUp","ArrowRight"].includes(e.key)) vol=Math.min(1,vol+.03);
+    else if(["ArrowDown","ArrowLeft"].includes(e.key)) vol=Math.max(0,vol-.03); else return; e.preventDefault(); setKnob(vol); sendVol(); });
+})();
+
+/* ------------------------------------------------------------ Anzeige */
+const meter=$("#meter"); for(let i=0;i<14;i++){ const b=document.createElement("i"); b.style.height=(6+i*0.9)+"px"; meter.appendChild(b); }
+function stName(id){ const s=cfg.stations.find(x=>x.id===id); return s?s.name:(id||"—"); }
+
+function render(s){
+  state=s;
+  const pl=s.playing||{}, src=pl.source_status||{};
+  const st=activeStation();
+  const watchHit=(s.watcher?.channels||[]).find(c=>c.active && !c.muted);
+  const alert=s.same?.active ? `SAME: ${s.same.active}` : (pl.reason==="Wache" ? `Wache: Betrieb auf ${pl.label}` : "");
+
+  $("#led").className="led"+(alert?" alert":(src.status==="playing" && !s.muted?" on":""));
+  const lcd=$("#lcd");
+  if(st && khz(st)!=null){
+    const f=khz(st), fm=f>=87500;
+    $("#lcd-freq").textContent=fm?(f/1000).toFixed(1):(f%1?f.toFixed(1):f.toFixed(0));
+    $("#lcd-unit").textContent=fm?"MHz":"kHz";
+    $("#lcd-band").textContent=bandOf(f)+(st.mode?" · "+st.mode.toUpperCase():"");
+  } else {
+    $("#lcd-freq").textContent="-----"; $("#lcd-unit").textContent=""; $("#lcd-band").textContent="—";
+  }
+  $("#lcd-name").textContent=pl.label||"—";
+  $("#lcd-mode").textContent=REASON[pl.reason]||"";
+
+  let sub="";
+  if(s.pending) sub="Stimme ab: "+s.pending+" …";
+  else if(src.status==="error") sub="Störung: "+(src.error||"");
+  else if(src.status==="connecting") sub="Verbinde …";
+  else if(s.fallback_active) sub="Ersatz für "+stName(s.base?.id);
+  else if(s.oneshot) sub="Einspielung: "+s.oneshot.label;
+  else if(pl.title) sub=pl.title;
+  else if(st?.kind==="kiwi"||st?.kind==="ubersdr") sub="über "+(st.kind==="kiwi"?"KiwiSDR":"UberSDR")+((st.name.match(/\(([^)]+)\)\s*$/)||[,""])[1].replace(/^/," ").trimEnd());
+  if(s.master<0.98 && pl.label && pl.label!=="—") sub+=(sub?" · ":"")+"Einblenden "+Math.round(s.master*100)+" %";
+  if(s.muted) sub="STUMM"+(sub?" · "+sub:"");
+  $("#lcd-sub").textContent=sub||" ";
+  const air=(s.on_air||{})[s.on_air_now]||[];
+  $("#lcd-plan").textContent=air.length?"▸ "+onAirText(air[0])+(air.length>1?` · +${air.length-1}`:""):" ";
+  $("#lcd-plan").title=air.length?"laut Sendeplan der HFCC:\n"+air.map(onAirText).join("\n"):"";
+  lcd.classList.toggle("muted",!!s.muted);
+
+  // S-Meter: Kiwi/UberSDR in dBm (−120 … −40), Stream/Datei = fester Ausschlag
+  let lvl=0;
+  if(src.status==="playing") lvl = src.s_meter_dbm==null ? 11 : Math.max(0,Math.min(14,Math.round((src.s_meter_dbm+120)/80*14)));
+  [...meter.children].forEach((b,i)=>b.classList.toggle("on",i<lvl));
+  meter.title=src.s_meter_dbm!=null?`S-Meter ${Math.round(src.s_meter_dbm)} dBm`:"S-Meter";
+
+  lcd.classList.toggle("alert",!!alert);
+  $("#lcd-alert").textContent=alert?"⚠ "+alert:"";
+  $("#alertbar").classList.toggle("show",!!alert);
+  $("#alerttext").textContent=alert;
+  placePointer(st);
+  document.querySelectorAll("#presets .key").forEach(k=>k.classList.toggle("down", !!st && k.dataset.id===st.id));
+  $("#btn-mute").classList.toggle("down",!!s.muted);
+  $("#mute-txt").textContent=s.muted?"an":"aus";
+  $("#btn-back").disabled=!s.manual && !watchHit && pl.reason!=="Wache";
+  const nx=s.schedule?.next;
+  $("#foot-right").textContent=nx?`Nächster Eintrag: ${nx.time} – ${nx.action==="sleep"?"Schlummern":stName(nx.station)}${nx.wake?" (Wecken)":""}`:"";
+  if(Date.now()-volTouched>1500 && document.activeElement?.id!=="knob"){ vol=s.volume; setKnob(vol); }
+
+  renderTranslate(s.translate||{});
+  renderStations(s, st);
+  renderSchedule(s.schedule||{});
+  renderWatch(s.watcher||{});
+  renderSame(s.same||{});
+  $("#events").innerHTML=(s.log||[]).map(e=>`<li><span class="t">${esc(e.t)}</span><span>${esc(e.text)}</span></li>`).join("")||'<li class="small">noch nichts</li>';
+  $("#foot").textContent=`Satellit · Laufzeit ${fmtUp(s.uptime)} · ${Object.keys(s.sources||{}).length} Quellen offen`;
+}
+function fmtUp(sec){ sec=Math.round(sec||0); const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60); return h?`${h} h ${m} min`:`${m} min`; }
+
+let trKey="";
+function renderTranslate(tr){
+  $("#tr-toggle").textContent=tr.enabled?"Ausschalten":"Einschalten";
+  $("#tr-toggle").disabled=!tr.available;
+  const ts=$("#tr-status");
+  ts.textContent=!tr.available?"Übersetzer nicht installiert (faster-whisper fehlt)":
+    tr.enabled?`${tr.status}`+(tr.load?` · Last ${Math.round(tr.load*100)} %`:"")+
+      (tr.skipped_seconds?` · ${tr.skipped_seconds} s übersprungen`:""):"aus";
+  ts.className="status"+(tr.enabled&&!/Fehler/.test(tr.status||"")?" on":"");
+  $("#tr-badge").classList.toggle("on",!!tr.enabled);
+  const sel=$("#tr-model"), models=tr.models||[];
+  const mkey=tr.model+"|"+models.map(m=>m.name+m.installed).join(",");
+  if(sel.dataset.key!==mkey && document.activeElement!==sel){
+    sel.dataset.key=mkey;
+    sel.innerHTML=models.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}${m.installed?"":` (+${esc(m.size)})`}</option>`).join("");
+    sel.value=tr.model;
+  }
+  sel.disabled=!tr.available;
+  const lines=tr.lines||[];
+  const key=lines.length+"|"+(lines[0]?lines[0].t+lines[0].text:"")+"|"+tr.enabled;
+  if(key===trKey) return;      // nur neu zeichnen, wenn sich etwas ändert (Scrollposition bleibt)
+  trKey=key;
+  $("#tr-lines").innerHTML=lines.map(l=>`<li class="${l.sure?"":"unsure"}"><span class="t">${esc(l.t)}</span>`+
+    `<span class="lang${l.plan?" plan":""}" title="${esc(l.lang_name)}, ${Math.round(l.prob*100)} % sicher${l.plan?" – passt zum Sendeplan":""}">${esc((l.lang||"?").toUpperCase())}${l.plan?" ▸":""}${l.sure?"":" ?"}</span>`+
+    `<span class="txt">${esc(l.text)}</span><span class="src">${esc(l.station)}</span></li>`).join("")
+    || `<li class="small">${tr.enabled?"noch nichts verstanden – die Sprache wird automatisch erkannt":"aus"}</li>`;
+}
+
+function renderStations(s, st){
+  const box=$("#stations"); box.innerHTML="";
+  for(const c of cfg.stations){
+    const src=(s.sources||{})[c.id], stat=src?src.status:"";
+    const cls=stat==="playing"?"play":stat==="error"?"err":stat==="connecting"?"conn":"";
+    const el=document.createElement("button");
+    el.className="st "+cls+(st&&st.id===c.id?" on":"");
+    const f=khz(c);
+    const fb=c.fallback?` · Ersatz: ${esc(shortName({name:stName(c.fallback)}))}`:"";
+    el.innerHTML=`<span class="dot"></span><span><span class="nm">${esc(c.name)}</span><br>
+      <span class="sub">${f!=null?(f>=87500?(f/1000).toFixed(1)+" MHz":f+" kHz"):""}${src?" · "+esc(src.error||stat):""}${fb}</span>${
+        (s.on_air||{})[c.id]?`<br><span class="sub air">jetzt: ${esc(s.on_air[c.id].map(a=>a.short+" "+a.lang_de).join(", "))}</span>`:""}</span>
+      <span class="kind">${esc({stream:"UKW",kiwi:"KIWI",ubersdr:"UBER",folder:"ORDNER",file:"DATEI"}[c.kind]||String(c.kind||"").toUpperCase())}</span>`;
+    el.onclick=()=>tune(c.id);
+    box.appendChild(el);
+  }
+}
+function onAirText(a){ return `${a.short} · ${a.lang_de} · ${a.site} ${a.power} kW`; }
+function renderSchedule(sc){
+  const ul=$("#sched");
+  if(!(sc.entries||[]).length){ ul.innerHTML='<li class="small">kein Fahrplan – es läuft, was von Hand gewählt wird</li>'; return; }
+  ul.innerHTML=sc.entries.map(e=>{
+    const cur=sc.current&&sc.current.id===e.id, nx=sc.next&&sc.next.id===e.id;
+    const what=e.action==="sleep"?"Schlummern":e.play?("Einspielung: "+(e.label||e.play.join(", "))):stName(e.station);
+    return `<li class="${cur?"cur":""}"><span class="t">${esc(e.time)}</span><span>${esc(what)}${e.wake?' <span class="small">· Wecken</span>':""}${e.enabled===false?' <span class="small">· aus</span>':""}</span>`+
+      (cur?' <span class="chip">läuft</span>':nx?' <span class="small">als nächstes</span>':"")+`</li>`;
+  }).join("");
+}
+function renderWatch(w){
+  const ul=$("#watch");
+  if(!w.enabled || !(w.channels||[]).length){ ul.innerHTML='<li class="small">Wache ist aus</li>'; return; }
+  ul.innerHTML=w.channels.map(c=>`<li><span class="t">${esc(c.freq_khz)} kHz ${esc(c.mode)}</span><span>${esc(c.name)}</span>`+
+    (c.active?' <span class="chip hit">Betrieb</span>':"")+(c.muted?' <span class="small">stumm</span>':"")+
+    (c.last_dbm!=null?` <span class="small">${Math.round(c.last_dbm)} dBm</span>`:"")+`</li>`).join("");
+}
+function renderSame(sm){
+  $("#fips").textContent=sm.enabled?`Gebiet (FIPS): ${(sm.fips||[]).join(", ")||"—"}`:"SAME-Wache ist aus. Test-Alarme gehen trotzdem.";
+  $("#same-rec").innerHTML=(sm.recent||[]).map(h=>`<li><span class="t">${esc(h.event)}</span><span>${esc(h.event_name)}</span>
+    <span class="small">${esc(h.station||"")} · K=${esc(h.confidence)}</span></li>`).join("")||'<li class="small">noch nichts empfangen</li>';
+}
+
+function clock(){ $("#lcd-clock").textContent=new Date().toLocaleTimeString("de-AT",{hour:"2-digit",minute:"2-digit"}); }
+setInterval(clock,1000); clock();
+
+async function poll(){ try{ render(await api("/api/state")); }catch(e){ $("#lcd-sub").textContent="Keine Verbindung zum Radio-Dienst"; $("#led").className="led"; } }
+setInterval(poll,1000);
+window.addEventListener("resize",()=>placePointer(activeStation()));
+
+async function loadConfig(){
+  try{
+    const c=await api("/api/config");
+    const sig=JSON.stringify([c.stations,c.fallback]);
+    if(sig!==loadConfig.sig){ loadConfig.sig=sig; cfg=c; cfg.stations=c.stations||[]; drawScale(); drawPresets(); }
+  }catch(e){}
+}
+setInterval(loadConfig,10000);
+
+/* ------------------------------------------------------------ Tragegriffe */
+let liftCount=0;
+document.querySelectorAll(".handle").forEach(h=>h.addEventListener("click",()=>{
+  const c=$("#cabinet"); c.classList.remove("lift"); void c.offsetWidth; c.classList.add("lift");
+  if(++liftCount===5) toast("Fenster ist zu. Das Radio bleibt hier.");
+}));
+
+/* ------------------------------------------------------------ Register & Knöpfe */
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.id==="tab-"+b.dataset.tab));
+  try{ localStorage.setItem("satellit-tab",b.dataset.tab); }catch(e){}
+});
+try{ const t=localStorage.getItem("satellit-tab"); if(t) document.querySelector(`.tabs button[data-tab="${t}"]`)?.click(); }catch(e){}
+$("#tr-toggle").onclick=()=>api("/api/translate",{enabled:!state?.translate?.enabled}).then(poll);
+$("#tr-model").onchange=ev=>{
+  const sel=ev.target, m=(state?.translate?.models||[]).find(x=>x.name===sel.value);
+  if(m && !m.installed && !confirm(`Modell ${m.name} ist noch nicht da und wird jetzt geladen (${m.size}). Über LTE kostet das Datenvolumen. Trotzdem laden?`)){
+    sel.value=state.translate.model; return;
+  }
+  api("/api/translate",{model:sel.value}).then(()=>{toast(`Übersetzer: Modell ${sel.value}`);sel.blur();poll();})
+    .catch(e=>toast(e.message));
+};
+$("#tr-clear").onclick=()=>api("/api/translate",{clear:true}).then(()=>{trKey="";poll();});
+$("#same-test").onclick=()=>api("/api/same/test",{event:$("#same-ev").value,area:true}).then(()=>toast("Test-Alarm eingespeist"));
+document.querySelectorAll(".toProg").forEach(a=>a.onclick=ev=>{ev.preventDefault();api("/api/mode",{mode:"program"}).then(()=>location.href="/programm");});
+
+loadConfig().then(poll);
+</script>
+</body>
+</html>

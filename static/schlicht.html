@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satellit</title>
+<style>
+  :root{
+    --bg:#15130f; --panel:#201c16; --panel2:#2a251d; --edge:#000;
+    --amber:#ffb54d; --amber-dim:#8a6a33; --ink:#efe6d2; --muted:#9a9079;
+    --green:#7ddf7d; --red:#ff6b5a; --blue:#79c4ff; --line:#3a3328;
+    --metal: linear-gradient(180deg,#3a342a 0%,#231f19 48%,#1b1813 52%,#2b261e 100%);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+       radial-gradient(1200px 500px at 50% -10%,#2a251d,transparent),var(--bg);
+       color:var(--ink);font:15px/1.45 "Segoe UI",system-ui,sans-serif;}
+  .wrap{max-width:1000px;margin:0 auto;padding:16px;}
+  .set{background:var(--metal);border:1px solid var(--edge);border-radius:14px;
+       box-shadow:inset 0 1px 0 #5a5140, 0 10px 30px rgba(0,0,0,.6);padding:16px;}
+  header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+  .brand{font-weight:800;letter-spacing:.28em;font-size:22px;color:var(--amber);
+         text-shadow:0 0 8px rgba(255,181,77,.35)}
+  .model{color:var(--muted);letter-spacing:.15em;font-size:12px;text-transform:uppercase}
+  .pwr{margin-left:auto;font-size:12px;color:var(--muted)}
+  .pwr b{color:var(--green)}
+
+  /* Skala */
+  .dial{position:relative;height:96px;border-radius:9px;margin:6px 0 16px;
+        background:linear-gradient(180deg,#120f0a,#241f16);
+        border:1px solid #000;box-shadow:inset 0 0 26px rgba(255,181,77,.10);overflow:hidden}
+  .dial .glow{position:absolute;inset:0;background:
+       radial-gradient(420px 90px at 50% 120%,rgba(255,181,77,.22),transparent)}
+  .tick{position:absolute;top:0;height:14px;width:1px;background:var(--amber-dim)}
+  .tick.maj{height:22px;background:var(--amber)}
+  .tick .n{position:absolute;top:22px;left:-10px;width:22px;text-align:center;
+     font:11px/1 ui-monospace,monospace;color:var(--amber)}
+  .band{position:absolute;bottom:6px;height:10px;border-radius:5px;opacity:.5}
+  .mk{position:absolute;bottom:26px;transform:translateX(-50%);text-align:center;cursor:pointer}
+  .mk i{display:block;width:0;height:0;border-left:5px solid transparent;
+    border-right:5px solid transparent;border-top:7px solid var(--muted);margin:0 auto}
+  .mk span{font-size:10px;color:var(--muted);white-space:nowrap;max-width:88px;overflow:hidden;
+    text-overflow:ellipsis;display:inline-block}
+  .mk.on i{border-top-color:var(--amber)} .mk.on span{color:var(--amber)}
+  .pointer{position:absolute;top:0;bottom:0;width:2px;background:var(--red);
+    box-shadow:0 0 10px var(--red);transition:left .8s cubic-bezier(.2,.7,.2,1)}
+
+  .cols{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .card h2{margin:0 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);font-weight:700}
+
+  /* Now playing */
+  .np{display:flex;align-items:center;gap:12px}
+  .np .lbl{font-size:24px;font-weight:700;color:var(--amber)}
+  .chip{font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);
+    color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .chip.warn{color:var(--red);border-color:var(--red)}
+  .chip.watch{color:var(--blue);border-color:var(--blue)}
+  .meter{height:8px;border-radius:5px;background:#120f0a;border:1px solid #000;margin:8px 0;overflow:hidden}
+  .meter>i{display:block;height:100%;background:linear-gradient(90deg,var(--amber-dim),var(--amber))}
+  .mrow{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+
+  /* Senderknöpfe */
+  .stations{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .st{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;
+    background:var(--panel2);border:1px solid var(--line);text-align:left;color:var(--ink);font:inherit}
+  .st:hover{border-color:var(--amber-dim)}
+  .st.on{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
+  .st .dot{width:8px;height:8px;border-radius:50%;background:#555;flex:none}
+  .st.play .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .st.err .dot{background:var(--red)} .st.conn .dot{background:var(--amber)}
+  .st .nm{font-weight:600;font-size:14px}
+  .st .sub{font-size:11px;color:var(--muted)}
+  .st .kind{margin-left:auto;font:10px/1 ui-monospace,monospace;color:var(--amber-dim)}
+
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button.act{background:#352c1e;color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:7px 11px;cursor:pointer;font-size:13px}
+  button.act:hover{border-color:var(--amber-dim)}
+  select{background:#120f0a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px}
+  ul{list-style:none;margin:0;padding:0} li{padding:4px 0;border-bottom:1px dashed #2c261d}
+  li:last-child{border:0}
+  .sched .cur{color:var(--amber)} .sched .nx{color:var(--ink)}
+  .t{font:12px/1 ui-monospace,monospace;color:var(--muted);margin-right:8px}
+  .small{font-size:12px;color:var(--muted)}
+  .same .rec{max-height:150px;overflow:auto}
+  .same .ev{color:var(--amber)} .same .warn{color:var(--red)}
+  /* Übersetzer */
+  .tr{margin-top:14px}
+  .tr .head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .tr .head h2{margin:0}
+  .tr .status{font-size:12px;color:var(--muted)}
+  .tr .status.on{color:var(--green)}
+  .tr .lines{max-height:320px;overflow:auto}
+  .tr li{display:flex;gap:8px;align-items:baseline;padding:6px 0}
+  .tr .lang{flex:none;font:11px/1.6 ui-monospace,monospace;padding:0 7px;border-radius:999px;
+    border:1px solid var(--amber-dim);color:var(--amber)}
+  .tr .unsure{opacity:.55} .tr .unsure .lang{border-style:dashed}
+  .tr .txt{flex:1;font-size:15px}
+  .tr .src{flex:none;font-size:11px;color:var(--muted);max-width:30%;text-align:right}
+  footer{margin-top:12px;color:var(--muted);font-size:11px;text-align:center;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="set">
+    <header>
+      <span class="brand">SATELLIT</span>
+      <span class="model">Virtueller Weltempfänger · KiwiSDR · UberSDR · UKW-Stream · Übersetzer</span>
+      <span class="pwr">Netz <b id="pwr">—</b></span>
+    </header>
+
+    <div class="dial" id="dial">
+      <div class="glow"></div>
+      <div class="pointer" id="pointer" style="left:50%"></div>
+    </div>
+
+    <div class="cols">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h2>Empfang</h2>
+          <div class="np">
+            <span class="lbl" id="npLabel">—</span>
+            <span class="chip" id="npReason">—</span>
+          </div>
+          <div class="mrow"><span>Lautstärke</span><span id="mPct">0%</span></div>
+          <div class="meter"><i id="mMaster" style="width:0%"></i></div>
+          <div class="mrow"><span>Überblendung A↔B</span><span id="xPct">A</span></div>
+          <div class="meter"><i id="mX" style="width:0%"></i></div>
+          <div class="row" style="margin-top:8px">
+            <button class="act" id="btnBack">Zurück zum Programm</button>
+            <span class="small" id="pending"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Sender</h2>
+          <div class="stations" id="stations"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card sched">
+          <h2>Hörfahrplan</h2>
+          <ul id="sched"></ul>
+        </div>
+
+        <div class="card">
+          <h2>Wache</h2>
+          <ul id="watch"></ul>
+        </div>
+
+        <div class="card same">
+          <h2>SAME-Wache (US-Notfalldurchsagen)</h2>
+          <div class="small" id="fips">Gebiet: —</div>
+          <div class="row" style="margin:8px 0">
+            <select id="sameEv">
+              <option value="RWT">RWT – Wochentest</option>
+              <option value="TOR">TOR – Tornadowarnung</option>
+              <option value="SVR">SVR – schweres Gewitter</option>
+              <option value="FFW">FFW – Sturzflut</option>
+              <option value="EAN">EAN – nationaler Notfall</option>
+            </select>
+            <button class="act" id="btnSame">Test-Alarm einspeisen</button>
+          </div>
+          <div class="rec"><ul id="sameRec"></ul></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card tr">
+      <div class="head">
+        <h2>Übersetzer → Englisch</h2>
+        <button class="act" id="btnTr">Einschalten</button>
+        <button class="act" id="btnTrClear" title="Liste leeren">Leeren</button>
+        <span class="status" id="trStatus">—</span>
+      </div>
+      <div class="lines"><ul id="trLines"></ul></div>
+    </div>
+
+    <footer><span id="foot">Satellit</span> ·
+      <a href="/programm" id="toProg" style="color:var(--amber)">zur Programm-Ansicht</a> ·
+      <a href="/" style="color:var(--amber)">Grundig-Ansicht</a></footer>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (p,b) => fetch(p,{method:b?'POST':'GET',headers:{'Content-Type':'application/json'},
+                             body:b?JSON.stringify(b):undefined}).then(r=>r.json());
+
+// --- Skala: log von 0.5 bis 110 MHz ---
+const FMIN=0.5, FMAX=110;
+const pos = f => {
+  f = Math.max(FMIN, Math.min(FMAX, f||FMIN));
+  return (Math.log10(f)-Math.log10(FMIN))/(Math.log10(FMAX)-Math.log10(FMIN))*100;
+};
+function buildScale(stations){
+  const dial=$('#dial');
+  dial.querySelectorAll('.tick,.mk,.band').forEach(e=>e.remove());
+  // Bänder (optisch): LW/MW, KW, UKW
+  const bands=[[0.5,1.7,'#7a5a2a'],[2.3,26,'#2a6a7a'],[87.5,108,'#7a2a4a']];
+  for(const [a,b,c] of bands){const d=document.createElement('div');d.className='band';
+    d.style.left=pos(a)+'%';d.style.width=(pos(b)-pos(a))+'%';d.style.background=c;dial.appendChild(d);}
+  for(const f of [0.5,1,3,10,30,100]){const t=document.createElement('div');
+    t.className='tick maj';t.style.left=pos(f)+'%';
+    const n=document.createElement('span');n.className='n';n.textContent=f<1?'.5':f;
+    t.appendChild(n);dial.appendChild(t);}
+  for(const s of stations){const m=document.createElement('div');m.className='mk';m.dataset.id=s.id;
+    m.style.left=pos(s.freq)+'%';m.innerHTML='<i></i><span>'+s.name+'</span>';
+    m.onclick=()=>api('/api/tune',{station:s.id});dial.appendChild(m);}
+}
+
+let stationsCache=[], built=false, activeFreq=null;
+function stKind(k){return k==='stream'?'UKW':k==='kiwi'?'MW/KW':k==='ubersdr'?'KW':k.toUpperCase();}
+
+async function tick(){
+  let st;
+  try{ st = await api('/api/state'); }catch(e){ $('#pwr').textContent='—'; return; }
+  $('#pwr').innerHTML='<b>ein</b>';
+
+  // Konfig für Senderliste (einmal + bei Änderung)
+  const cfg = await api('/api/config');
+  const stations = cfg.stations||[];
+  if(!built || stations.length!==stationsCache.length){
+    stationsCache=stations; buildScale(stations); built=true;
+    $('#fips').textContent='Gebiet (FIPS): '+((cfg.same&&cfg.same.fips||[]).join(', ')||'—');
+  }
+
+  // Now playing
+  const pl=st.playing||{};
+  $('#npLabel').textContent=pl.label||'—';
+  const rc=$('#npReason'); rc.textContent=pl.reason||'—';
+  rc.className='chip'+(pl.reason==='SAME'?' warn':pl.reason==='Wache'?' watch':'');
+  $('#mMaster').style.width=Math.round((st.master||0)*100)+'%';
+  $('#mPct').textContent=Math.round((st.master||0)*100)+'%';
+  const x=st.crossfade||0; $('#mX').style.width=Math.round(x*100)+'%';
+  $('#xPct').textContent=x<.5?('A '+Math.round((1-x)*100)+'%'):('B '+Math.round(x*100)+'%');
+  $('#pending').textContent=st.pending?('↻ blende auf: '+st.pending):'';
+
+  // Senderknöpfe
+  const box=$('#stations'); box.innerHTML='';
+  for(const s of stations){
+    const srcState=(st.sources||{})[s.id];
+    const stat=srcState?srcState.status:'';
+    const cls=stat==='playing'?'play':stat==='error'?'err':stat==='connecting'?'conn':'';
+    const on=(pl.label===s.name);
+    const el=document.createElement('button');
+    el.className='st '+cls+(on?' on':'');
+    el.innerHTML=`<span class="dot"></span><span><span class="nm">${s.name}</span><br>
+      <span class="sub">${s.freq} · ${srcState?(srcState.error||stat||'bereit'):'—'}</span></span>
+      <span class="kind">${stKind(s.kind)}</span>`;
+    el.onclick=()=>api('/api/tune',{station:s.id});
+    box.appendChild(el);
+  }
+  // aktive Sender-Frequenz -> Zeiger
+  const act=stations.find(s=>s.name===pl.label);
+  if(act){const np=pos(act.freq); if(np!==activeFreq){$('#pointer').style.left=np+'%';activeFreq=np;}}
+
+  // Markierungen hervorheben
+  document.querySelectorAll('.mk').forEach(m=>{
+    const s=stations.find(x=>x.id===m.dataset.id);
+    m.classList.toggle('on', !!(s&&s.name===pl.label));});
+
+  // Fahrplan
+  const sc=st.schedule||{}; const ul=$('#sched'); ul.innerHTML='';
+  for(const e of (sc.entries||[])){
+    const isCur=sc.current&&sc.current.time===e.time;
+    const isNx=sc.next&&sc.next.time===e.time;
+    const what=e.action==='sleep'?'Schlummern':(stationName(stations,e.station));
+    const li=document.createElement('li');
+    li.className=isCur?'cur':isNx?'nx':'';
+    li.innerHTML=`<span class="t">${e.time}</span>${what}`+
+      (e.wake?' <span class="small">· Wecken</span>':'')+
+      (isCur?' <span class="chip">läuft</span>':isNx?' <span class="small">als nächstes</span>':'');
+    ul.appendChild(li);
+  }
+  if(!(sc.entries||[]).length) ul.innerHTML='<li class="small">kein Fahrplan</li>';
+
+  // Wache
+  const w=st.watcher||{}; const wl=$('#watch'); wl.innerHTML='';
+  for(const c of (w.channels||[])){
+    const li=document.createElement('li');
+    li.innerHTML=`<span class="t">${c.freq_khz} kHz ${c.mode}</span>${c.name}`+
+      (c.active?' <span class="chip watch">Betrieb</span>':'')+
+      (c.muted?' <span class="small">stumm</span>':'')+
+      (c.last_dbm!=null?` <span class="small">${c.last_dbm.toFixed(0)} dBm</span>`:'');
+    wl.appendChild(li);
+  }
+  if(!(w.channels||[]).length) wl.innerHTML='<li class="small">keine Kanäle / Wache aus</li>';
+
+  // SAME
+  const sm=st.same||{}; const rl=$('#sameRec'); rl.innerHTML='';
+  for(const h of (sm.recent||[])){
+    const warn=['TOR','SVR','FFW','EWW','EAN','SVW'].includes(h.event);
+    const li=document.createElement('li');
+    li.innerHTML=`<span class="ev ${warn?'warn':''}">${h.event}</span> ${h.event_name}
+      <span class="small">· ${h.station||''} · K=${h.confidence}</span>`;
+    rl.appendChild(li);
+  }
+  if(!(sm.recent||[]).length) rl.innerHTML='<li class="small">noch nichts empfangen</li>';
+  if(sm.active){ $('#npReason').classList.add('warn'); }
+
+  // Übersetzer
+  const tr=st.translate||{};
+  $('#btnTr').textContent=tr.enabled?'Ausschalten':'Einschalten';
+  $('#btnTr').disabled=!tr.available;
+  const ts=$('#trStatus');
+  ts.textContent=!tr.available?'faster-whisper nicht installiert (pip install faster-whisper)':
+    tr.enabled?`${tr.status} · Modell ${tr.model}`+(tr.load?` · Last ${Math.round(tr.load*100)} %`:'')+
+      (tr.skipped_seconds?` · ${tr.skipped_seconds} s übersprungen`:''):'aus';
+  ts.className='status'+(tr.enabled&&!/Fehler/.test(tr.status||'')?' on':'');
+  const tl=$('#trLines'); tl.innerHTML='';
+  for(const l of (tr.lines||[])){
+    const li=document.createElement('li'); if(!l.sure) li.className='unsure';
+    li.innerHTML=`<span class="t">${l.t}</span>`+
+      `<span class="lang" title="${esc(l.lang_name)}, ${Math.round(l.prob*100)} % sicher">`+
+      `${esc((l.lang||'?').toUpperCase())}${l.sure?'':' ?'}</span>`+
+      `<span class="txt">${esc(l.text)}</span><span class="src">${esc(l.station)}</span>`;
+    tl.appendChild(li);
+  }
+  if(!(tr.lines||[]).length) tl.innerHTML='<li class="small">'+
+    (tr.enabled?'noch nichts verstanden – Sprache wird automatisch erkannt':'aus')+'</li>';
+  trEnabled=!!tr.enabled;
+
+  $('#foot').textContent=`Satellit · Laufzeit ${Math.round(st.uptime||0)} s · `+
+     `${(st.sources?Object.keys(st.sources).length:0)} Quellen aktiv`;
+}
+let trEnabled=false;
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+function stationName(stations,id){const s=stations.find(x=>x.id===id);return s?s.name:(id||'—');}
+
+$('#btnBack').onclick=()=>api('/api/back',{});
+$('#toProg').onclick=ev=>{ev.preventDefault();api('/api/mode',{mode:'program'}).then(()=>location.href='/programm');};
+$('#btnTr').onclick=()=>api('/api/translate',{enabled:!trEnabled}).then(tick);
+$('#btnTrClear').onclick=()=>api('/api/translate',{clear:true}).then(tick);
+$('#btnSame').onclick=()=>api('/api/same/test',{event:$('#sameEv').value,area:true});
+
+tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>

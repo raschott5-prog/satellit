@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satellit Programm</title>
+<style>
+  :root{
+    --bg:#f4f1ea; --card:#fffdf8; --ink:#23211c; --muted:#6f685b; --line:#e2dccf;
+    --accent:#2f6f8f; --accent-soft:#e3eef3; --ann:#b7791f; --ann-soft:#fbf0dc;
+    --warn:#b4432f; --warn-soft:#f8e3de; --ok:#3f7d4e; --off:#a9a293;
+    --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#191814; --card:#22201b; --ink:#ece6d8; --muted:#a39b8a; --line:#36332b;
+      --accent:#7db4cf; --accent-soft:#1f3038; --ann:#e0a54a; --ann-soft:#3a2d17;
+      --warn:#ee7e6a; --warn-soft:#3d221d; --ok:#86c493; --off:#6b665a;
+      --shadow:none; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:4px 0 16px}
+  .brand{font-weight:700;font-size:22px;letter-spacing:.02em}
+  .brand small{font-weight:500;color:var(--muted);font-size:15px;margin-left:6px}
+  .clock{margin-left:auto;font-variant-numeric:tabular-nums;font-size:20px;color:var(--muted)}
+  a.sw{color:var(--muted);font-size:13px}
+  .grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:16px;box-shadow:var(--shadow)}
+  .card h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--muted);
+           text-transform:uppercase;letter-spacing:.08em}
+  .big{font-size:26px;font-weight:700;line-height:1.2}
+  .sub{color:var(--muted);font-size:14px;margin-top:4px}
+  .chip{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;
+        background:var(--accent-soft);color:var(--accent);margin-top:8px}
+  .chip.warn{background:var(--warn-soft);color:var(--warn)}
+  .chip.ann{background:var(--ann-soft);color:var(--ann)}
+  .banner{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--ann-soft);
+          color:var(--ann);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .banner b{color:var(--ink)}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
+         background:var(--card);color:var(--ink);padding:9px 14px}
+  button:hover{border-color:var(--accent)}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.small{padding:5px 10px;font-size:14px}
+  .vol{display:flex;align-items:center;gap:12px}
+  input[type=range]{flex:1;accent-color:var(--accent);height:28px}
+  .volnum{font-variant-numeric:tabular-nums;width:3.2em;text-align:right;font-weight:600}
+  .mute{width:100%;margin-top:12px;padding:14px;font-size:18px;font-weight:600}
+  .mute.on{background:var(--warn);border-color:var(--warn);color:#fff}
+  .next-time{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  .week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:4px}
+  .ent{overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto}
+  .ent.miss{box-shadow:inset 3px 0 0 var(--warn)}
+  .missnote{color:var(--warn);font-size:13px;margin-top:4px}
+  @media(max-width:760px){.week{grid-template-columns:1fr}}
+  .day{border:1px solid var(--line);border-radius:10px;padding:8px;min-height:120px}
+  .day.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .day h3{margin:0 0 6px;font-size:14px;display:flex;justify-content:space-between}
+  .day h3 span{color:var(--muted);font-weight:400;font-size:12px}
+  .ent{display:block;width:100%;text-align:left;margin:0 0 5px;padding:5px 7px;
+       border-radius:8px;font-size:13px;border:1px solid transparent;
+       background:var(--accent-soft);color:var(--ink)}
+  .ent .t{font-variant-numeric:tabular-nums;font-weight:600;margin-right:5px}
+  .ent.play{background:var(--ann-soft)}
+  .ent.sleep{background:transparent;border-color:var(--line);color:var(--muted)}
+  .ent.off{opacity:.45;text-decoration:line-through}
+  .ent.skip{opacity:.6;font-style:italic}
+  .ent.sel{border-color:var(--ink)}
+  .legend{display:flex;gap:14px;font-size:13px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;
+            vertical-align:-1px}
+  .detail{margin-top:12px;padding:12px;border-radius:10px;border:1px dashed var(--line)}
+  .detail:empty{display:none}
+
+  ul.list{list-style:none;margin:0;padding:0}
+  ul.list li{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);
+             flex-wrap:wrap}
+  ul.list li:last-child{border:0}
+  .fname{font-weight:600;flex:1;min-width:140px;word-break:break-all}
+  .meta{color:var(--muted);font-size:13px}
+  .drop{margin-top:10px;border:2px dashed var(--line);border-radius:10px;padding:14px;
+        text-align:center;color:var(--muted);font-size:14px}
+  .drop.over{border-color:var(--accent);color:var(--accent)}
+  .log{font-size:13px;color:var(--muted);max-height:240px;overflow:auto}
+  .log div{padding:3px 0;border-bottom:1px dotted var(--line)}
+  .log b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:6px}
+  .two{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-top:14px}
+  @media(max-width:900px){.two{grid-template-columns:1fr}}
+  .sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand">Satellit <small>Programm</small></span>
+    <a class="sw" href="/radio" id="toRadio">zur Radio-Ansicht</a>
+    <span class="clock" id="clock">--:--</span>
+  </header>
+
+  <div class="grid">
+    <section class="card" aria-live="polite">
+      <h2>Jetzt</h2>
+      <div class="big" id="nowLabel">—</div>
+      <div class="sub" id="nowTitle"></div>
+      <span class="chip" id="nowReason">—</span>
+      <div id="annBox"></div>
+    </section>
+
+    <section class="card">
+      <h2>Als Nächstes</h2>
+      <div class="next-time" id="nextTime">—</div>
+      <div class="sub" id="nextWhat">—</div>
+      <div class="sub" id="nextIn"></div>
+      <div class="row" id="nextBtns"></div>
+    </section>
+
+    <section class="card">
+      <h2>Lautstärke</h2>
+      <div class="vol">
+        <label class="sr" for="vol">Lautstärke</label>
+        <input type="range" id="vol" min="0" max="100" step="1">
+        <span class="volnum" id="volNum">–</span>
+      </div>
+      <button class="mute" id="mute">Stumm</button>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:14px">
+    <h2>Wochenplan</h2>
+    <div class="week" id="week"></div>
+    <div class="legend">
+      <span><i style="background:var(--accent-soft)"></i>Musik / Programm</span>
+      <span><i style="background:var(--ann-soft)"></i>Ansage / Einspielung</span>
+      <span><i style="border:1px solid var(--line)"></i>Ende (ausblenden)</span>
+      <span>Eintrag anklicken zum Ein-/Ausschalten</span>
+    </div>
+    <div class="detail" id="detail"></div>
+  </section>
+
+  <div class="two">
+    <section class="card">
+      <h2>Einspielungen &amp; Musik</h2>
+      <ul class="list" id="media"></ul>
+      <audio id="preview" preload="none"></audio>
+      <div class="drop" id="drop">
+        Dateien hierher ziehen oder <label style="text-decoration:underline;cursor:pointer">
+        auswählen<input type="file" id="file" accept="audio/*" multiple hidden></label>
+        <div style="font-size:12px;margin-top:4px">MP3, WAV, OGG, FLAC, M4A · max. 50 MB</div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Protokoll</h2>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (p, b) => fetch(p, {method: b ? 'POST' : 'GET',
+  headers: {'Content-Type': 'application/json'}, body: b ? JSON.stringify(b) : undefined})
+  .then(r => r.json());
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+const REASON = {Zeitplan:'nach Plan', Hand:'von Hand gewählt', Ersatz:'Ersatzbetrieb – Internet/Quelle ausgefallen',
+  Schlummern:'wird ausgeblendet', SAME:'Alarm', Wache:'Wache', '—':'—', start:'startet'};
+
+let cfg = null, stations = {}, selected = null, lastWeek = '', volDragging = false;
+
+function entryText(e){
+  if (e.action === 'sleep') return 'Ende';
+  if (e.action === 'play') return e.label || e.play.join(', ');
+  return stations[e.station] || e.station || '—';
+}
+function todayISO(){ const d = new Date(), p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function fmtSec(s){ if(s == null) return ''; s = Math.round(s); return s < 60 ? s+' s' : Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' min'; }
+
+async function loadConfig(){
+  cfg = await api('/api/config');
+  stations = {}; (cfg.stations || []).forEach(s => stations[s.id] = s.name);
+}
+
+function renderWeek(sc){
+  const miss = sc.missing || {};
+  const key = JSON.stringify([sc.week, sc.today, selected, todayISO(), miss]);
+  if (key === lastWeek) return; lastWeek = key;
+  const w = $('#week'); w.innerHTML = '';
+  sc.week.forEach((list, d) => {
+    const div = document.createElement('div');
+    div.className = 'day' + (d === sc.today ? ' today' : '');
+    div.innerHTML = `<h3>${DAYS[d]}<span>${d === sc.today ? 'heute' : ''}</span></h3>`;
+    list.forEach(e => {
+      const b = document.createElement('button');
+      const skipped = d === sc.today && e.skip_date === todayISO();
+      b.className = 'ent ' + e.action + (e.enabled ? '' : ' off') + (skipped ? ' skip' : '')
+                  + (selected === e.id ? ' sel' : '') + (miss[e.id] ? ' miss' : '');
+      b.innerHTML = `<span class="t">${esc(e.time)}</span>${esc(entryText(e))}`;
+      b.title = miss[e.id] ? 'Datei fehlt: ' + miss[e.id].join(', ')
+              : e.enabled ? (skipped ? 'heute ausgesetzt' : 'aktiv') : 'ausgeschaltet';
+      b.onclick = () => { selected = selected === e.id ? null : e.id; lastWeek = ''; renderDetail(sc); renderWeek(sc); };
+      div.appendChild(b);
+    });
+    if (!list.length) div.insertAdjacentHTML('beforeend', '<div class="meta">—</div>');
+    w.appendChild(div);
+  });
+  renderDetail(sc);
+}
+
+function renderDetail(sc){
+  const box = $('#detail');
+  const e = sc.entries.find(x => x.id === selected);
+  if (!e){ box.innerHTML = ''; return; }
+  const skipped = e.skip_date === todayISO();
+  const days = e.days.length === 7 ? 'täglich' : e.days.map(x => x[0].toUpperCase()+x.slice(1)).join(', ');
+  box.innerHTML = `<b>${esc(e.time)} · ${esc(entryText(e))}</b>
+    <div class="meta">${days}${e.action==='play' ? ' · Dateien: '+esc(e.play.join(' → ')) : ''}</div>
+    ${(sc.missing||{})[e.id] ? `<div class="missnote">Datei fehlt: ${esc(sc.missing[e.id].join(', '))} – bitte unten hochladen, sonst wird diese Ansage übersprungen.</div>` : ''}
+    <div class="row">
+      <button class="small" data-act="toggle">${e.enabled ? 'Ausschalten' : 'Einschalten'}</button>
+      ${e.enabled ? `<button class="small" data-act="skip">${skipped ? 'Heute wieder aktiv' : 'Nur heute aussetzen'}</button>` : ''}
+      ${e.action==='play' ? '<button class="small" data-act="play">Jetzt im Raum abspielen</button>' : ''}
+    </div>`;
+  box.querySelector('[data-act=toggle]').onclick = () => api('/api/entry', {id:e.id, enabled:!e.enabled}).then(tick);
+  const sk = box.querySelector('[data-act=skip]');
+  if (sk) sk.onclick = () => api('/api/entry', {id:e.id, skip_today:!skipped}).then(tick);
+  const pl = box.querySelector('[data-act=play]');
+  if (pl) pl.onclick = () => api('/api/play', {entry:e.id}).then(tick);
+}
+
+let mediaKey = '';
+async function renderMedia(){
+  const m = (await api('/api/media')).media || [];
+  const key = JSON.stringify(m); if (key === mediaKey) return; mediaKey = key;
+  const ul = $('#media'); ul.innerHTML = '';
+  if (!m.length) ul.innerHTML = '<li class="meta">Noch keine Dateien.</li>';
+  m.forEach(f => {
+    const li = document.createElement('li');
+    if (f.kind === 'folder'){
+      li.innerHTML = `<span class="fname">${esc(f.name)}/</span><span class="meta">Musikordner · ${f.files} Titel</span>`;
+    } else {
+      li.innerHTML = `<span class="fname">${esc(f.name)}</span><span class="meta">${fmtSec(f.seconds)}</span>
+        <button class="small" data-p>Vorschau</button><button class="small" data-r>Im Raum</button>`;
+      li.querySelector('[data-p]').onclick = ev => {
+        const a = $('#preview'), url = '/media/' + encodeURIComponent(f.name);
+        if (!a.paused && a.dataset.f === f.name){ a.pause(); ev.target.textContent = 'Vorschau'; return; }
+        document.querySelectorAll('[data-p]').forEach(x => x.textContent = 'Vorschau');
+        a.src = url; a.dataset.f = f.name; a.play(); ev.target.textContent = 'Vorschau stoppen';
+        a.onended = () => ev.target.textContent = 'Vorschau';
+      };
+      li.querySelector('[data-p]').title = 'nur hier am Gerät anhören';
+      li.querySelector('[data-r]').title = 'über die Lautsprecher im Raum abspielen';
+      li.querySelector('[data-r]').onclick = () => api('/api/play', {files:[f.name], label:f.name}).then(tick);
+    }
+    ul.appendChild(li);
+  });
+}
+
+async function upload(files){
+  for (const f of files){
+    const r = await fetch('/api/media/' + encodeURIComponent(f.name), {method:'PUT', body:f});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) alert(f.name + ': ' + (j.error || 'Fehler beim Hochladen'));
+  }
+  mediaKey = ''; renderMedia(); tick();
+}
+
+async function tick(){
+  let st; try { st = await api('/api/state'); } catch(e){ $('#nowReason').textContent = 'keine Verbindung'; return; }
+  const pl = st.playing || {};
+  $('#nowLabel').textContent = pl.label || '—';
+  $('#nowTitle').textContent = pl.title ? '♪ ' + pl.title : '';
+  const rc = $('#nowReason');
+  rc.textContent = st.muted ? 'stumm geschaltet' : (REASON[pl.reason] || pl.reason || '—');
+  rc.className = 'chip' + ((st.muted || pl.reason === 'Ersatz' || pl.reason === 'SAME') ? ' warn' : '');
+
+  const os = st.oneshot, ab = $('#annBox');
+  if (os || (st.queue && st.queue.length)){
+    ab.innerHTML = `<div class="banner">${os ? '<span>Ansage läuft:</span> <b>'+esc(os.label)+'</b>' : ''}
+      ${st.queue.length ? '<span>wartet: '+esc(st.queue.join(', '))+'</span>' : ''}
+      <button class="small" id="stopAnn" style="margin-left:auto">Stoppen</button></div>`;
+    $('#stopAnn').onclick = () => api('/api/oneshot/stop', {}).then(tick);
+  } else ab.innerHTML = '';
+
+  const sc = st.schedule || {};
+  const nx = sc.next;
+  if (nx){
+    const at = new Date(nx.at), now = new Date();
+    const mins = Math.round((at - now) / 60000);
+    const day = at.toDateString() === now.toDateString() ? '' :
+      (DAYS[(at.getDay()+6)%7] + ' ');
+    $('#nextTime').textContent = day + nx.time;
+    $('#nextWhat').textContent = (nx.action === 'play' ? 'Ansage: ' : nx.action === 'sleep' ? '' : 'Musik: ') + entryText(nx);
+    $('#nextIn').textContent = mins < 60 ? `in ${mins} min` : `in ${Math.floor(mins/60)} h ${mins%60} min`;
+    const isToday = at.toDateString() === now.toDateString();
+    $('#nextBtns').innerHTML = isToday ? '<button class="small" id="skipNext">Diesmal aussetzen</button>' : '';
+    const sk = $('#skipNext'); if (sk) sk.onclick = () => api('/api/entry', {id:nx.id, skip_today:true}).then(tick);
+  } else {
+    $('#nextTime').textContent = '—'; $('#nextWhat').textContent = 'nichts geplant';
+    $('#nextIn').textContent = ''; $('#nextBtns').innerHTML = '';
+  }
+
+  if (!volDragging){
+    $('#vol').value = Math.round((st.volume || 0) * 100);
+    $('#volNum').textContent = Math.round((st.volume || 0) * 100) + '%';
+  }
+  const mb = $('#mute');
+  mb.classList.toggle('on', !!st.muted);
+  mb.textContent = st.muted ? 'Ton wieder an' : 'Stumm';
+  mb.setAttribute('aria-pressed', st.muted ? 'true' : 'false');
+
+  renderWeek(sc);
+  $('#log').innerHTML = (st.log || []).slice(0, 15).map(l =>
+    `<div><b>${esc(l.t.slice(7))}</b>${esc(l.text)}</div>`).join('') || '<div>—</div>';
+}
+
+// Bedienelemente
+const vol = $('#vol');
+vol.addEventListener('input', () => { volDragging = true; $('#volNum').textContent = vol.value + '%'; });
+vol.addEventListener('change', () => { api('/api/volume', {value: vol.value / 100}).then(() => { volDragging = false; tick(); }); });
+$('#mute').onclick = () => api('/api/mute', {muted: !$('#mute').classList.contains('on')}).then(tick);
+$('#toRadio').onclick = ev => { ev.preventDefault(); api('/api/mode', {mode:'radio'}).then(() => location.href = '/radio'); };
+
+const drop = $('#drop');
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => upload(e.dataTransfer.files));
+$('#file').addEventListener('change', e => upload(e.target.files));
+
+setInterval(() => { const d = new Date();
+  $('#clock').textContent = d.toLocaleTimeString('de-AT', {hour:'2-digit', minute:'2-digit'}); }, 1000);
+
+loadConfig().then(() => { tick(); renderMedia(); });
+setInterval(tick, 1000);
+setInterval(renderMedia, 5000);
+</script>
+</body>
+</html>

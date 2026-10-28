@@ -1,0 +1,23 @@
+# --- Pflicht ---------------------------------------------------------------
+numpy>=1.23
+requests>=2.28            # Playlist-Auflösung, UberSDR /connection
+
+# --- Soundausgabe (empfohlen) ---------------------------------------------
+# Fehlt sounddevice/PortAudio, läuft Satellit stumm weiter.
+sounddevice>=0.4
+
+# --- Web-SDR-Quellen -------------------------------------------------------
+websocket-client>=1.5     # KiwiSDR und UberSDR
+opuslib>=3.0              # UberSDR mit format=opus (braucht libopus)
+
+# --- Übersetzer (optional) ------------------------------------------------
+# Sprache erkennen und ins Englische übersetzen, offline auf der CPU.
+# Lädt beim ersten Einschalten das Whisper-Modell (small: ~460 MB).
+faster-whisper>=1.0
+
+# --- Windows-Tray (optional) ----------------------------------------------
+pystray>=0.19
+Pillow>=9.0
+
+# Hinweis: ffmpeg ist ein externes Programm (kein pip-Paket) und muss im PATH
+# liegen bzw. unter Windows im Ordner ffmpeg\ neben run-satellit.bat.
