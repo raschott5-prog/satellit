@@ -1,0 +1,99 @@
+{
+  "version": 2,
+  "_beispiel": "Guten Morgen: zehn Minuten sanft wecken mit der langen Fassung von „Good Morning“, danach eigene Musik. Siehe docs/beispiel-guten-morgen.md",
+  "funk": {
+    "enabled": false
+  },
+  "mode": "program",
+  "media_dir": null,
+  "fallback": "musik",
+  "audio": {
+    "device": null,
+    "auto_level": true,
+    "volume": 0.5,
+    "crossfade_seconds": 6.0,
+    "wake_seconds": 90.0,
+    "noise_level": 0.0
+  },
+  "stations": [
+    {
+      "id": "musik",
+      "name": "Eigene Musik",
+      "kind": "folder",
+      "path": "musik"
+    },
+    {
+      "id": "good-morning",
+      "name": "Good Morning (lange Fassung)",
+      "kind": "file",
+      "path": "good-morning-lang.mp3",
+      "loop": false
+    }
+  ],
+  "schedule": {
+    "enabled": true,
+    "entries": [
+      {
+        "id": "wecken",
+        "time": "06:30",
+        "station": "good-morning",
+        "fade": 600,
+        "wake": true,
+        "days": [
+          "mo",
+          "di",
+          "mi",
+          "do",
+          "fr"
+        ],
+        "label": "Wecken: zehn Minuten von ganz leise auf normal, dann das Finale mit Pfiff"
+      },
+      {
+        "id": "danach",
+        "time": "06:43",
+        "station": "musik",
+        "fade": 8,
+        "days": [
+          "mo",
+          "di",
+          "mi",
+          "do",
+          "fr"
+        ]
+      },
+      {
+        "id": "wochenende",
+        "time": "08:30",
+        "station": "good-morning",
+        "fade": 600,
+        "wake": true,
+        "days": [
+          "sa",
+          "so"
+        ],
+        "label": "Am Wochenende später"
+      },
+      {
+        "id": "wochenende-danach",
+        "time": "08:43",
+        "station": "musik",
+        "fade": 8,
+        "days": [
+          "sa",
+          "so"
+        ]
+      },
+      {
+        "id": "nacht",
+        "time": "22:30",
+        "action": "sleep",
+        "fade": 900,
+        "label": "Eine Viertelstunde ausblenden"
+      }
+    ]
+  },
+  "web": {
+    "listen": "127.0.0.1",
+    "port": 8080
+  }
+}

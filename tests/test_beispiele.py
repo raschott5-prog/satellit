@@ -24,6 +24,9 @@ def test_beispiel_laedt(tmp_path, pfad):
     for e in eng.scheduler.entries:              # jeder Programmwechsel hat seinen Sender
         assert e.station is None or e.station in ids, e.id
     assert c.get("fallback") in ids
+    for st in c.data["stations"]:                # mitgelieferte Dateien sind da
+        if st["kind"] == "file":
+            assert (pfad.parent / "media" / st["path"]).is_file(), st["path"]
 
 
 def test_altersheim_ohne_ansagen_mit_kaffeezeit(tmp_path):
@@ -38,3 +41,15 @@ def test_altersheim_ohne_ansagen_mit_kaffeezeit(tmp_path):
     # das Signal-Lied liegt dem Beispiel bei
     assert (BEISPIELE[0].parent / "media" / "kaffeezeit.mp3").stat().st_size > 100_000
     assert "kaffee" in eng.state()["schedule"]["missing"]   # Oberfläche zeigt: Datei fehlt
+
+
+def test_guten_morgen_ist_lang_genug_zum_einblenden():
+    import subprocess
+    from satellit.sources.stream import ffmpeg_path
+    c = json.loads((BEISPIELE[0].parent / "guten-morgen.json").read_text(encoding="utf-8"))
+    weck = [e for e in c["schedule"]["entries"] if e.get("wake")]
+    datei = BEISPIELE[0].parent / "media" / "good-morning-lang.mp3"
+    probe = subprocess.run([ffmpeg_path(), "-i", str(datei)], capture_output=True, text=True)
+    h, m, s = probe.stderr.split("Duration: ")[1].split(",")[0].split(":")
+    laenge = int(h) * 3600 + int(m) * 60 + float(s)
+    assert all(laenge > e["fade"] + 60 for e in weck)   # Finale erst nach dem Einblenden

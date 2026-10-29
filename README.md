@@ -60,6 +60,9 @@ Satellit besteht aus zwei sauber getrennten Teilen:
   (mitgeliefert: „Kaffeezeit“, eigene Komposition, frei verwendbar):
   [`docs/beispiel-altersheim.md`](docs/beispiel-altersheim.md),
   Konfiguration in [`beispiele/altersheim.json`](beispiele/altersheim.json).
+  Zum Wecken über zehn Minuten liegt „Good Morning“ bei, ein Country-Pop-Stück
+  in langer Fassung, das von selbst voller wird und mit einem Pfiff endet:
+  [`docs/beispiel-guten-morgen.md`](docs/beispiel-guten-morgen.md).
 - **Funk-Teil** (`satellit/funk/`, Schalter **„Funk & Kurzwelle“**):
   KiwiSDR, UberSDR, WebSDR, Wache, SAME, HFCC-Sendeplan, Übersetzer,
   Radio-Ansicht mit Skala. Zusatzpakete in `requirements-funk.txt`.
