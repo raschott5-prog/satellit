@@ -44,7 +44,7 @@ dann die Sprachdurchsage, am Ende **EOM**: Präambel + `NNNN`, ebenfalls 3×.
 
 ## Folgerungen für Satellit
 
-- Eigenes Modul `satellit/same.py`: reiner Dekoder, Eingang 48-kHz-PCM eines
+- Eigenes Modul `satellit/funk/same.py` (bis 0.3: `satellit/same.py`): reiner Dekoder, Eingang 48-kHz-PCM eines
   beliebigen Decks bzw. einer Quelle, Ausgang geparste Header-Objekte mit
   Konfidenz. Kein eigener Netz- oder Audiozugriff – hängt sich an vorhandene PCM.
 - Als Geschwister zur Wache in die Engine hängen (`watcher.py` bleibt S-Meter,

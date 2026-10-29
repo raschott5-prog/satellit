@@ -39,7 +39,7 @@ Modi: usb, lsb, cwu, cwl, am, sam, fm, nfm (+ IQ-Modi)
 
 ## Umsetzung in 0.1 (Stand jetzt)
 
-`satellit/sources/ubersdr.py`: `/connection` → Websocket (`format=opus&version=4`)
+`satellit/funk/ubersdr.py` (bis 0.3: `satellit/sources/ubersdr.py`): `/connection` → Websocket (`format=opus&version=4`)
 → `get_status`, Ping-Keepalive, Opus-Dekodierung (opuslib). Feste UUID pro
 Installation (in `config.json`), `needs_handover` 30 s vor Sitzungsende statt
 UUID-Rotation. PCM-v4-Pfad vorgesehen, aber noch nicht implementiert.

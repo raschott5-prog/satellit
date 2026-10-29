@@ -21,7 +21,9 @@ datas = [("static", "static")]
 if os.path.exists(os.path.join("ffmpeg", "ffmpeg.exe")):
     datas.append(("ffmpeg/ffmpeg.exe", "ffmpeg"))
 
-hiddenimports = []
+# Der Funk-Teil wird erst beim Einschalten importiert – PyInstaller sieht
+# das nicht von selbst, daher ausdrücklich mitnehmen.
+hiddenimports = collect_submodules("satellit.funk")
 for mod in ("sounddevice", "websocket", "opuslib", "pystray", "PIL", "requests"):
     try:
         hiddenimports += collect_submodules(mod)

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "satellit"
-version = "0.4.0"
-description = "Virtuelles Weltempfänger-Radio: UKW-Stream, KiwiSDR/UberSDR, Hörfahrplan, SAME-Wache, Übersetzer"
+version = "0.4.1"
+description = "Virtuelles Weltempfänger-Radio: Grundgerät (Streams, Musik, Hörfahrplan, Wecken) und abschaltbarer Funk-Teil (KiwiSDR/UberSDR/WebSDR, Übersetzer, SAME)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
@@ -17,6 +17,8 @@ audio = ["sounddevice>=0.4"]
 sdr = ["websocket-client>=1.5", "opuslib>=3.0"]
 tray = ["pystray>=0.19", "Pillow>=9.0"]
 translate = ["faster-whisper>=1.0"]
+# Funk-Teil komplett (wie requirements-funk.txt)
+funk = ["websocket-client>=1.5", "opuslib>=3.0", "faster-whisper>=1.0"]
 all = ["sounddevice>=0.4", "websocket-client>=1.5", "opuslib>=3.0",
        "pystray>=0.19", "Pillow>=9.0"]
 dev = ["pytest>=7"]
@@ -25,7 +27,7 @@ dev = ["pytest>=7"]
 satellit = "satellit.__main__:main"
 
 [tool.setuptools]
-packages = ["satellit", "satellit.sources"]
+packages = ["satellit", "satellit.sources", "satellit.funk"]
 
 [tool.setuptools.package-data]
 satellit = ["../static/*.html"]

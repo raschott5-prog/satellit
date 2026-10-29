@@ -12,6 +12,9 @@ Tray-Symbol und ffmpeg dabei.
    ```
    pip install -r requirements.txt
    ```
+   Für den Funk-Teil (KiwiSDR, UberSDR, Übersetzer) zusätzlich
+   `pip install -r requirements-funk.txt`. Die WebSDR-Quelle läuft vorerst
+   nur unter Linux.
 4. **`run-satellit.bat` doppelklicken.** Es öffnet die Oberfläche im Browser
    (http://localhost:8080) und legt ein Tray-Symbol an.
 

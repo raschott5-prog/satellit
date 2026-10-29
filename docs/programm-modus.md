@@ -4,14 +4,19 @@ Satellit hat zwei Gesichter auf einem Kern:
 
 | | Radio-Modus | Programm-Modus |
 |---|---|---|
-| Für | Radiointeressierte, Funkamateure | Praxis, Laden, Hotel, Schule, Museum |
+| Für | Radiointeressierte, Funkamateure | Praxis, Hospiz, Laden, Hotel, Schule, Museum |
 | Oberfläche | Skala, Frequenzen, Wache, SAME | Wochenplan, Lautstärke, Ansagen |
-| Quellen | Streams, KiwiSDR, UberSDR, Dateien | Musikordner, Streams, Dateien |
+| Quellen | Streams, KiwiSDR, UberSDR, WebSDR, Dateien | Musikordner, Streams, Dateien |
 | Engine, Mixer, Zeitplan | gemeinsam | gemeinsam |
 
-Umschalten: Link oben bzw. unten in der Oberfläche, `--mode program` beim
-Start, oder `"mode": "program"` in der Konfiguration. Wache und SAME laufen
-im Programm-Modus nicht mit.
+Der Radio-Modus gehört zum **Funk-Teil** (seit 0.4 abschaltbar, Schalter
+„Funk & Kurzwelle“ unten in dieser Ansicht). Ist der Funk-Teil aus – so
+starten neue Installationen –, gibt es nur den Programm-Modus; Web-SDR,
+Wache, SAME und Übersetzer werden dann gar nicht erst geladen.
+
+Umschalten zwischen den Ansichten (mit Funk-Teil): Link oben bzw. unten in
+der Oberfläche, `--mode program` beim Start, oder `"mode": "program"` in der
+Konfiguration. Wache und SAME laufen im Programm-Modus nicht mit.
 
 ## Bedienung
 
@@ -43,7 +48,7 @@ im Programm-Modus nicht mit.
    warten, bis der Ton wieder an ist.
 5. **Fehlende Datei:** wird übersprungen und protokolliert; weitere Dateien
    derselben Einspielung (z. B. Gong → Ansage) laufen trotzdem.
-6. **Alarm (SAME) bricht ab** und wird protokolliert (nur Radio-Modus).
+6. **Alarm (SAME) bricht ab** und wird protokolliert (nur mit Funk-Teil im Radio-Modus).
 7. **Sommerzeit-Ende / Uhr zurück:** nichts wird doppelt ausgelöst.
 
 Darstellung: `"mode": "duck"` (Standard) senkt die Musik auf `duck_level`
