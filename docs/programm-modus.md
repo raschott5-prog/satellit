@@ -77,6 +77,9 @@ Oberfläche selbst („nur heute aussetzen").
 
 ## Anwendungsideen
 
+Ausgearbeitet: [Altersheim – die Bewohner machen ihr Programm](beispiel-altersheim.md)
+(Programmwechsel statt Ansagen, Signal-Lied „Kaffeezeit“ um 16 Uhr).
+
 Arztpraxis/Wartebereich (Hinweise, Handy lautlos) · Ladenfunk (Musik +
 getaktete Durchsagen) · Hotel/Gastro (Tagesstimmung) · Schule (Gong,
 Durchsagen, Pausenmusik) · Museum (Raum-Loops) · Funkamateur (eigene

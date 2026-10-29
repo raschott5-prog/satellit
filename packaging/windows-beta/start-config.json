@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "funk": {
+    "enabled": true
+  },
   "mode": "radio",
   "media_dir": null,
   "fallback": "musik",
@@ -255,6 +258,5 @@
   "web": {
     "listen": "127.0.0.1",
     "port": 8080
-  },
-  "ubersdr_uuid": "2b24f0da-bc86-4986-9bb3-d004d2429fe9"
+  }
 }

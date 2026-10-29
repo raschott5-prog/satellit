@@ -1,0 +1,203 @@
+{
+  "version": 2,
+  "_beispiel": "Altersheim: Die Bewohner wählen ihr Musikprogramm selbst. Keine Ansagen – Lieder sind die Signale. Siehe docs/beispiel-altersheim.md",
+  "funk": {
+    "enabled": false
+  },
+  "mode": "program",
+  "media_dir": null,
+  "fallback": "musik",
+  "audio": {
+    "device": null,
+    "auto_level": true,
+    "volume": 0.4,
+    "crossfade_seconds": 6.0,
+    "wake_seconds": 90.0,
+    "noise_level": 0.0
+  },
+  "announce": {
+    "duck_level": 0.0,
+    "duck_seconds": 2.0,
+    "release_seconds": 3.0,
+    "gain": 1.0,
+    "max_delay_minutes": 5
+  },
+  "stations": [
+    {
+      "id": "musik",
+      "name": "Allerlei (Ersatz)",
+      "kind": "folder",
+      "path": "musik"
+    },
+    {
+      "id": "morgen",
+      "name": "Guten-Morgen-Musik",
+      "kind": "folder",
+      "path": "morgen"
+    },
+    {
+      "id": "schlager",
+      "name": "Schlager",
+      "kind": "folder",
+      "path": "schlager"
+    },
+    {
+      "id": "volksmusik",
+      "name": "Volksmusik",
+      "kind": "folder",
+      "path": "volksmusik"
+    },
+    {
+      "id": "operette",
+      "name": "Operette & Wienerlied",
+      "kind": "folder",
+      "path": "operette"
+    },
+    {
+      "id": "klassik",
+      "name": "Leise Klassik",
+      "kind": "folder",
+      "path": "klassik"
+    },
+    {
+      "id": "tanzcafe",
+      "name": "Tanzcafé",
+      "kind": "folder",
+      "path": "tanzcafe"
+    },
+    {
+      "id": "abend",
+      "name": "Abendlieder",
+      "kind": "folder",
+      "path": "abend"
+    },
+    {
+      "id": "kirche",
+      "name": "Kirchenlieder",
+      "kind": "folder",
+      "path": "kirche"
+    }
+  ],
+  "schedule": {
+    "enabled": true,
+    "entries": [
+      {
+        "id": "wecken",
+        "time": "07:00",
+        "station": "morgen",
+        "fade": 1800,
+        "wake": true,
+        "label": "Sanft wecken – eine halbe Stunde von ganz leise auf normal"
+      },
+      {
+        "id": "vormittag",
+        "time": "08:30",
+        "station": "schlager",
+        "fade": 20,
+        "days": [
+          "mo",
+          "di",
+          "mi",
+          "do",
+          "fr",
+          "sa"
+        ]
+      },
+      {
+        "id": "vormittag-so",
+        "time": "08:30",
+        "station": "kirche",
+        "fade": 20,
+        "days": [
+          "so"
+        ],
+        "label": "Sonntagvormittag"
+      },
+      {
+        "id": "spaeter-vormittag",
+        "time": "10:30",
+        "station": "volksmusik",
+        "fade": 20,
+        "days": [
+          "mo",
+          "mi",
+          "fr"
+        ]
+      },
+      {
+        "id": "spaeter-vormittag-op",
+        "time": "10:30",
+        "station": "operette",
+        "fade": 20,
+        "days": [
+          "di",
+          "do",
+          "sa",
+          "so"
+        ]
+      },
+      {
+        "id": "mittagslied",
+        "time": "11:55",
+        "play": [
+          "mittagessen.mp3"
+        ],
+        "mode": "replace",
+        "label": "Lied zum Mittagessen (nach Wahl)",
+        "enabled": false
+      },
+      {
+        "id": "mittag",
+        "time": "12:00",
+        "station": "klassik",
+        "fade": 30
+      },
+      {
+        "id": "mittagsruhe",
+        "time": "13:00",
+        "action": "sleep",
+        "fade": 300,
+        "label": "Mittagsruhe"
+      },
+      {
+        "id": "nachmittag",
+        "time": "14:30",
+        "station": "tanzcafe",
+        "fade": 600,
+        "wake": true
+      },
+      {
+        "id": "kaffee",
+        "time": "16:00",
+        "play": [
+          "kaffeezeit.mp3"
+        ],
+        "mode": "replace",
+        "label": "Kaffeezeit (Signal-Lied)"
+      },
+      {
+        "id": "abendbrot",
+        "time": "18:00",
+        "station": "klassik",
+        "fade": 30
+      },
+      {
+        "id": "abendlieder",
+        "time": "19:00",
+        "station": "abend",
+        "fade": 30
+      },
+      {
+        "id": "nachtruhe",
+        "time": "20:30",
+        "action": "sleep",
+        "fade": 1800,
+        "label": "Langsam ausblenden bis 21:00"
+      }
+    ]
+  },
+  "web": {
+    "listen": "0.0.0.0",
+    "port": 8080
+  }
+}

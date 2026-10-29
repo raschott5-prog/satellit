@@ -1,8 +1,8 @@
-# Satellit 0.3 Beta (macOS) - wird von "Satellit starten.command" installiert
+# Satellit 0.4 Beta (macOS) - wird von "Satellit starten.command" installiert
 numpy>=1.23
 requests>=2.28            # Senderlisten, Kiwi-Proxy (bringt certifi mit)
 sounddevice>=0.4          # Soundausgabe (bringt PortAudio fuer macOS mit)
-websocket-client>=1.5     # KiwiSDR und UberSDR
+websocket-client>=1.5     # Funk-Teil: KiwiSDR und UberSDR
 imageio-ffmpeg>=0.5       # fertiges ffmpeg fuer Internet-Radio (Intel + Apple Silicon)
 pystray>=0.19             # Symbol in der Menueleiste
 Pillow>=9.0

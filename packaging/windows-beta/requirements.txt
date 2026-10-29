@@ -1,8 +1,8 @@
-# Satellit 0.3 Beta (Windows, leicht) - wird von Satellit-starten.bat installiert
+# Satellit 0.4 Beta (Windows, leicht) - wird von Satellit-starten.bat installiert
 numpy>=1.23
 requests>=2.28            # Senderlisten, Kiwi-Proxy
 sounddevice>=0.4          # Soundausgabe (bringt PortAudio fuer Windows mit)
-websocket-client>=1.5     # KiwiSDR und UberSDR
+websocket-client>=1.5     # Funk-Teil: KiwiSDR und UberSDR
 imageio-ffmpeg>=0.5       # fertiges ffmpeg fuer Internet-Radio
 pystray>=0.19             # Tray-Symbol
 Pillow>=9.0

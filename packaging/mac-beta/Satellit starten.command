@@ -1,5 +1,5 @@
 #!/bin/bash
-# Satellit 0.3 Beta für macOS – Doppelklick genügt.
+# Satellit 0.4 Beta für macOS – Doppelklick genügt.
 # Beim ersten Start wird eine eigene Python-Umgebung im Ordner .venv
 # angelegt (braucht Internet, 1–3 Minuten).
 . "$(dirname "$0")/_gemeinsam.sh"

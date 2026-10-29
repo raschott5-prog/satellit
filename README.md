@@ -55,6 +55,11 @@ Satellit besteht aus zwei sauber getrennten Teilen:
   z. B. morgens eine Stunde lang Vogelgesang von ganz leise auf normal
   (`{"time": "06:30", "station": "voegel", "fade": 3600, "wake": true}`,
   Dateien in den Medienordner `voegel/`).
+  Ein ausgearbeitetes Beispiel ist das **Altersheim**, in dem die Bewohner ihr
+  Musikprogramm selbst wählen und um 16 Uhr ein Walzer zur Kaffeezeit läuft
+  (mitgeliefert: „Kaffeezeit“, eigene Komposition, frei verwendbar):
+  [`docs/beispiel-altersheim.md`](docs/beispiel-altersheim.md),
+  Konfiguration in [`beispiele/altersheim.json`](beispiele/altersheim.json).
 - **Funk-Teil** (`satellit/funk/`, Schalter **„Funk & Kurzwelle“**):
   KiwiSDR, UberSDR, WebSDR, Wache, SAME, HFCC-Sendeplan, Übersetzer,
   Radio-Ansicht mit Skala. Zusatzpakete in `requirements-funk.txt`.

@@ -1,8 +1,9 @@
-﻿SATELLIT 0.3 - BETA FÜR WINDOWS
+﻿SATELLIT 0.4 - BETA FÜR WINDOWS
 ===============================
 
-Satellit ist ein virtuelles Weltempfänger-Radio: Kurzwelle live über
-öffentliche KiwiSDR-Empfänger, dazu Internet-Radio, Zeitplan und Wecker.
+Satellit ist ein virtuelles Weltempfänger-Radio: Internet-Radio, eigene
+Musik, Zeitplan und Wecker - und, wer mag, Kurzwelle live über
+öffentliche KiwiSDR-Empfänger mit Übersetzer.
 Bedient wird es im Browser.
 
 
@@ -48,10 +49,33 @@ BEDIENUNG
 - Oberfläche wieder öffnen: Doppelklick auf das Symbol.
 
 
+GRUNDGERÄT UND FUNK-TEIL (NEU IN 0.4)
+-------------------------------------
+
+Satellit besteht jetzt aus zwei Teilen:
+- dem Grundgerät: Internet-Radio, eigene Musik, Wochenplan, sanftes
+  Wecken und Ausblenden, Ansagen - schlicht und ohne Funkbegriffe,
+- dem Funk-Teil: Kurzwelle über KiwiSDR, Senderskala, Übersetzer.
+
+In diesem Paket ist der Funk-Teil eingeschaltet. Wer nur Internet-Radio,
+Musik und Wecker möchte: in der Radio-Ansicht ganz unten auf
+"Funk-Teil ausschalten" klicken. Es bleibt die schlichte Programm-Ansicht
+(Wochenplan, Lautstärke, Stumm). Wieder einschalten: dort ganz unten der
+Schalter "Funk & Kurzwelle".
+Bei ausgeschaltetem Funk-Teil schweigen die Kurzwellensender; der Plan
+springt dann auf die eigene Musik im Ordner "musik" (siehe unten).
+
+Ein ausgearbeitetes Beispiel fürs Grundgerät liegt im Ordner "beispiele":
+ein Altersheim, in dem die Bewohner ihr Musikprogramm selbst wählen -
+ohne Ansagen, um 16 Uhr läuft der Walzer "Kaffeezeit". Beschreibung:
+beispiele/beispiel-altersheim.md
+
+
 ÜBERSETZER (OPTIONAL)
 ---------------------
 
-Satellit kann mithören, die Sprache erkennen und ins Englische übersetzen.
+Satellit kann mithören, die Sprache erkennen und ins Englische übersetzen
+(gehört zum Funk-Teil).
 Das ist groß (zusammen ca. 600 MB) und deshalb nicht dabei.
 Nachrüsten: "Uebersetzer-nachruesten.bat" doppelklicken (am besten im WLAN),
 Satellit neu starten, in der Oberfläche den Übersetzer einschalten.

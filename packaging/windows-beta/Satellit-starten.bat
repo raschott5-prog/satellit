@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Satellit 0.3 Beta - Doppelklick genuegt.
+REM  Satellit 0.4 Beta - Doppelklick genuegt.
 REM  Beim ersten Start wird eine eigene Python-Umgebung im Ordner
 REM  .venv angelegt (braucht Internet, 1-3 Minuten).
 REM ============================================================
