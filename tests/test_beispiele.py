@@ -53,3 +53,11 @@ def test_guten_morgen_ist_lang_genug_zum_einblenden():
     h, m, s = probe.stderr.split("Duration: ")[1].split(",")[0].split(":")
     laenge = int(h) * 3600 + int(m) * 60 + float(s)
     assert all(laenge > e["fade"] + 60 for e in weck)   # Finale erst nach dem Einblenden
+
+
+def test_klangstuecke_liegen_bei():
+    media = BEISPIELE[0].parent / "media"
+    for name in ("kaffeezeit.mp3", "good-morning.mp3", "good-morning-lang.mp3", "fernzug.mp3"):
+        assert (media / name).stat().st_size > 100_000, name
+    for skript in ("kaffeezeit.py", "goodmorning.py", "fernzug.py", "uhrwerk.py", "drumsolo.py"):
+        assert (BEISPIELE[0].parent / skript).is_file(), skript

@@ -63,6 +63,9 @@ Satellit besteht aus zwei sauber getrennten Teilen:
   Zum Wecken über zehn Minuten liegt „Good Morning“ bei, ein Country-Pop-Stück
   in langer Fassung, das von selbst voller wird und mit einem Pfiff endet:
   [`docs/beispiel-guten-morgen.md`](docs/beispiel-guten-morgen.md).
+  Alle mitgelieferten Klangstücke (eigene Kompositionen, frei verwendbar),
+  darunter „Fernzug“ – Metall, Elektronik und vorbeifahrende Züge im Takt
+  einer Bahnhofsuhr: [`docs/klangstuecke.md`](docs/klangstuecke.md).
 - **Funk-Teil** (`satellit/funk/`, Schalter **„Funk & Kurzwelle“**):
   KiwiSDR, UberSDR, WebSDR, Wache, SAME, HFCC-Sendeplan, Übersetzer,
   Radio-Ansicht mit Skala. Zusatzpakete in `requirements-funk.txt`.
