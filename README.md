@@ -28,9 +28,32 @@ Weltempfänger – aber seine Sender aus dem Netz holt:
 Bedienung im Browser unter `http://localhost:8080` – auf Windows, Linux und
 dem Raspberry Pi gleich.
 
+### Grundgerät und Funk-Teil
+
+Satellit besteht aus zwei sauber getrennten Teilen:
+
+- **Grundgerät** (immer da): Internet-Streams, lokale Musik und Ordner,
+  Wochenplan, sanftes Wecken und Einschlafen, Ansagen und Einspielungen,
+  Ersatzbetrieb ohne Internet. Keine Funkbegriffe, wenige Abhängigkeiten
+  (`requirements.txt`). Gedacht auch für Praxis, Hospiz, Pflegeheim, Laden:
+  z. B. morgens eine Stunde lang Vogelgesang von ganz leise auf normal
+  (`{"time": "06:30", "station": "voegel", "fade": 3600, "wake": true}`,
+  Dateien in den Medienordner `voegel/`).
+- **Funk-Teil** (`satellit/funk/`, Schalter **„Funk & Kurzwelle“**):
+  KiwiSDR, UberSDR, WebSDR, Wache, SAME, HFCC-Sendeplan, Übersetzer,
+  Radio-Ansicht mit Skala. Zusatzpakete in `requirements-funk.txt`.
+
+Der Schalter sitzt unten in der Programm-Ansicht (aus der Radio-Ansicht
+zurück: „Funk-Teil ausschalten“ unten), per API `POST /api/funk
+{"enabled": true}` oder in `config.json` als `"funk": {"enabled": true}`.
+Neue Installationen starten als Grundgerät. Eine ältere Konfiguration mit
+Web-SDR-Sendern behält beim ersten Start den Funk-Teil. Ist er aus, wird
+`satellit.funk` gar nicht erst geladen; Web-SDR-Sender im Plan melden
+„gehört zum Funk-Teil“ und der Ersatz (lokale Musik) springt ein.
+
 ### Zwei Gesichter, ein Kern (neu in 0.2)
 
-- **Radio-Modus** – Skala, Frequenzen, KiwiSDR/UberSDR, Wache, SAME.
+- **Radio-Modus** (nur mit Funk-Teil) – Skala, Frequenzen, KiwiSDR/UberSDR/WebSDR, Wache, SAME.
 - **Programm-Modus** – Wochenplan, lokale Musik, Ansagen und Einspielungen,
   großer Lautstärkeregler und Stumm-Knopf. Keine Funkbegriffe. Für Praxis,
   Laden, Hotel, Schule, Museum – oder den Funkamateur, der eigene Aufnahmen
@@ -45,7 +68,8 @@ Regeln und Bedienung: [`docs/programm-modus.md`](docs/programm-modus.md).
 Voraussetzungen: Python 3.10+, ffmpeg.
 
 ```
-pip install -r requirements.txt
+pip install -r requirements.txt                 # Grundgerät
+pip install -r requirements-funk.txt            # dazu, wer den Funk-Teil will
 python -m satellit
 ```
 
@@ -89,9 +113,10 @@ Mixer: Deck A / Deck B, Überblendung, Pegelausgleich, Master-Rampe, Begrenzer
         |
 Ausgabe: PortAudio (oder stumm / WAV)
 
-Engine: Fahrplan (alle 0,25 s geprüft), Wache (eigener Thread),
-        SAME-Dekoder (eigener Thread), Übersetzer (eigener Thread,
-        hört am Mixer mit), Prioritätsleiter
+Engine: Fahrplan (alle 0,25 s geprüft), Einspielungen, Ersatzbetrieb
+  └ Funk-Teil (abschaltbar): Wache (eigener Thread), SAME-Dekoder
+    (eigener Thread), Übersetzer (eigener Thread, hört am Mixer mit),
+    HFCC, legt seine Schichten über das Programm
 Web: kleiner HTTP-Server (nur Standardbibliothek) + eine HTML-Datei
 ```
 
@@ -101,17 +126,21 @@ Web: kleiner HTTP-Server (nur Standardbibliothek) + eine HTML-Datei
 | `satellit/mixer.py` | Zwei Decks, Crossfade, Weck-Rampe, Pegelausgleich, Begrenzer |
 | `satellit/config.py` | Konfiguration laden/speichern (plattformübergreifend) |
 | `satellit/sources/stream.py` | Internet-Stream über ffmpeg, .pls/.m3u |
-| `satellit/sources/kiwi.py` | KiwiSDR-Protokoll, IMA-ADPCM, S-Meter, Kurz-Abfrage |
-| `satellit/sources/ubersdr.py` | UberSDR (Opus), feste UUID, weiche Übergabe |
 | `satellit/sources/file.py` | Lokale Dateien (WAV nativ, sonst ffmpeg), Musikordner |
 | `satellit/media.py` | Medienordner, sichere Dateinamen, Demo-Gong |
-| `satellit/same.py` | SAME-Dekoder (AFSK, Best-of-3, Parser) + Generator |
-| `satellit/translate.py` | Übersetzer: Abschnitte, Pausenschnitt, Whisper, Filter |
-| `satellit/hfcc.py` | Sendeplan der HFCC: was läuft auf welcher Kurzwellenfrequenz |
 | `satellit/scheduler.py` | Hörfahrplan |
-| `satellit/watcher.py` | Aktivitätserkennung über das S-Meter |
-| `satellit/engine.py` | Verbindet alles, Prioritätsleiter |
-| `satellit/web.py`, `static/index.html`, `static/program.html` | API, Radio- und Programm-Oberfläche |
+| `satellit/engine.py` | Verbindet alles, Schalter für den Funk-Teil |
+| **Funk-Teil** | |
+| `satellit/funk/__init__.py` | Quellenarten, Zusatzpakete, Fabrik für Funkquellen |
+| `satellit/funk/funkteil.py` | Andockstelle an der Engine: Schichten, Wache, SAME, HFCC, Übersetzer |
+| `satellit/funk/kiwi.py` | KiwiSDR-Protokoll, IMA-ADPCM, S-Meter, Kurz-Abfrage |
+| `satellit/funk/ubersdr.py` | UberSDR (Opus), feste UUID, weiche Übergabe |
+| `satellit/funk/websdr.py` | PA3FWM-WebSDR über den Original-Client im unsichtbaren Chromium |
+| `satellit/funk/watcher.py` | Aktivitätserkennung über das S-Meter |
+| `satellit/funk/same.py` | SAME-Dekoder (AFSK, Best-of-3, Parser) + Generator |
+| `satellit/funk/translate.py` | Übersetzer: Abschnitte, Pausenschnitt, Whisper, Filter |
+| `satellit/funk/hfcc.py` | Sendeplan der HFCC: was läuft auf welcher Kurzwellenfrequenz |
+| `satellit/web.py`, `static/program.html`, `static/index.html` | API, Programm-Oberfläche (Grundgerät), Radio-Oberfläche (Funk-Teil) |
 | `satellit/output.py` | PortAudio / WAV / stumm |
 | `satellit/tray.py`, `satellit/wake.py` | Windows-Tray, Standby-Wecken |
 
@@ -235,6 +264,29 @@ Reiner Dekoder, hängt sich an vorhandene PCM (bevorzugt NWR-Internet-Streams;
 
 Ohne echtes Signal lässt sich alles über die Oberfläche („Test-Alarm
 einspeisen“) oder die API (`POST /api/same/test`) ausprobieren.
+
+### WebSDR (Enschede, Hack Green, …) – neu
+
+PA3FWM erlaubt seinen WebSDR-Client nur unverändert; Nachbau und Reverse
+Engineering sind untersagt. Satellit baut daher nichts nach, sondern lässt
+**den Original-Client** laufen:
+
+* je Quelle eine eigene virtuelle Soundkarte (`pactl load-module module-null-sink`),
+* ein unsichtbarer Chromium (`--headless=new`) spielt nur dort hinein,
+* Frequenz und Modus werden nach dem Laden per DevTools gesetzt und geprüft
+  (manche WebSDR überschreiben den Modus aus `?tune=` mit dem Bandstandard),
+* `parec` liest den Monitor der Senke; beim Stoppen verschwinden Browser,
+  Profil und Senke wieder.
+
+```json
+{"id": "shannon-hg", "name": "Shannon VOLMET 5505 (Hack Green)", "kind": "websdr",
+ "url": "http://hackgreensdr.org:8901/", "freq_khz": 5505, "mode": "usb", "buffer": 3}
+```
+
+Modi: `usb`, `lsb`, `am`, `fm`, `cw`. Vorerst **nur Linux** (braucht `pactl`,
+`parec`, Chromium). Die Serverliste von websdr.org wird bewusst nicht
+eingebunden – ihre Weiterverwendung in automatischen Systemen braucht die
+Erlaubnis von PA3FWM; Empfänger trägt man von Hand ein.
 
 ### Fairness gegenüber KiwiSDR-/UberSDR-Betreibern
 

@@ -35,7 +35,7 @@ from typing import Callable, Optional
 
 import numpy as np
 
-from .audio import BLOCK, SAMPLE_RATE
+from ..audio import BLOCK, SAMPLE_RATE
 
 WHISPER_RATE = 16_000
 DECIM = SAMPLE_RATE // WHISPER_RATE          # 3

@@ -24,9 +24,11 @@ def server(tmp_path):
     c.data["schedule"]["enabled"] = False
     c.data["watcher"]["enabled"] = False
     c.data["same"]["sources"] = []
+    c.data["funk"] = {"enabled": True}
+    c.data["mode"] = "radio"
     c.data["same"]["fips"] = ["024031"]
     eng = Engine(c, output=SilentOutput())
-    eng.translator.backend = lambda audio, lang: ([], "en", 1.0)   # kein Whisper im Test
+    eng.funk.translator.backend = lambda audio, lang: ([], "en", 1.0)   # kein Whisper im Test
     eng.start()
     handler = type("H", (web._Handler,), {"engine": eng, "config": c})
     httpd = web.ThreadingHTTPServer(("127.0.0.1", 0), handler)

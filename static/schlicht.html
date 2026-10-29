@@ -219,6 +219,7 @@ function stKind(k){return k==='stream'?'UKW':k==='kiwi'?'MW/KW':k==='ubersdr'?'K
 async function tick(){
   let st;
   try{ st = await api('/api/state'); }catch(e){ $('#pwr').textContent='—'; return; }
+  if(st.funk && !st.funk.enabled){ location.href='/programm'; return; }   // Funk-Teil aus
   $('#pwr').innerHTML='<b>ein</b>';
 
   // Konfig für Senderliste (einmal + bei Änderung)

@@ -9,7 +9,7 @@ from satellit.audio import BLOCK, SAMPLE_RATE
 from satellit.config import Config
 from satellit.engine import Engine
 from satellit.output import SilentOutput
-from satellit.translate import (FRAME, Translator, cut_point, drop_repeats, keep_segment,
+from satellit.funk.translate import (FRAME, Translator, cut_point, drop_repeats, keep_segment,
                                 to_whisper,
                                 WHISPER_RATE)
 
@@ -200,6 +200,7 @@ def _engine(tmp_path):
     c.data["schedule"]["enabled"] = False
     c.data["watcher"]["enabled"] = False
     c.data["same"]["sources"] = []
+    c.data["funk"] = {"enabled": True}
     c.data["translate"].update({"min_seconds": 1.0, "max_seconds": 2.0})
     return Engine(c, output=SilentOutput())
 
@@ -207,14 +208,14 @@ def _engine(tmp_path):
 def test_engine_taps_mixer_before_volume(tmp_path):
     eng = _engine(tmp_path)
     fake = FakeBackend()
-    eng.translator.backend = fake
+    eng.funk.translator.backend = fake
     eng.start()
     try:
         eng.tune("a")
         eng.set_muted(True)            # stumm – übersetzt trotzdem
-        eng.set_translate(True)
+        eng.funk.set_translate(True)
         assert eng.config.get("translate", "enabled") is True
-        assert _wait(lambda: eng.translator.lines, timeout=8), "Mixer-Abgriff liefert nichts"
+        assert _wait(lambda: eng.funk.translator.lines, timeout=8), "Mixer-Abgriff liefert nichts"
         st = eng.state()["translate"]
         assert st["enabled"] and st["lines"]
     finally:
@@ -233,7 +234,7 @@ def test_phrase_loops_inside_a_sentence_are_collapsed():
 
 
 def test_auto_threads():
-    from satellit.translate import auto_threads
+    from satellit.funk.translate import auto_threads
     assert auto_threads(3) == 3
     assert 2 <= auto_threads(0) <= 8
 
@@ -249,7 +250,7 @@ class _Info:
 
 
 def test_whisper_backend_stops_between_segments():
-    from satellit.translate import WhisperBackend
+    from satellit.funk.translate import WhisperBackend
     stop = {"now": False}
     produced = []
 
@@ -287,7 +288,7 @@ def test_stop_waits_for_running_translation():
 
 
 def test_backend_disables_temperature_fallback_by_default():
-    from satellit.translate import WhisperBackend
+    from satellit.funk.translate import WhisperBackend
     seen = {}
 
     class FakeModel:
@@ -308,7 +309,7 @@ def test_backend_disables_temperature_fallback_by_default():
 def test_model_loads_from_cache_without_network_first(monkeypatch):
     import sys
     import types
-    from satellit.translate import WhisperBackend
+    from satellit.funk.translate import WhisperBackend
     calls = []
 
     class FakeWhisperModel:
@@ -328,7 +329,7 @@ def test_model_loads_from_cache_without_network_first(monkeypatch):
 
 def test_model_switch_reloads_in_own_thread(monkeypatch):
     """Ein Modellwechsel verwirft das alte Modell erst im Übersetzer-Thread."""
-    import satellit.translate as tr
+    import satellit.funk.translate as tr
     loaded = []
 
     class FakeWhisper(tr.WhisperBackend):
@@ -361,7 +362,7 @@ def test_model_switch_reloads_in_own_thread(monkeypatch):
 
 def test_plan_language_wins_when_whisper_guesses_otherwise():
     """Sendeplan sagt Kroatisch/Niederländisch, Whisper rät Tschechisch -> Kroatisch."""
-    from satellit.translate import WhisperBackend
+    from satellit.funk.translate import WhisperBackend
     calls = []
 
     class Info:

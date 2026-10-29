@@ -18,6 +18,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
+FUNK_KINDS = ("kiwi", "ubersdr", "websdr")   # wie satellit.sources.FUNK_KINDS
+
 
 def default_config_path() -> Path:
     if sys.platform.startswith("win"):
@@ -33,9 +35,12 @@ def default_config() -> dict[str, Any]:
     """Ein spielbarer Beispielstand – echte Stream-URLs trägt der Nutzer ein."""
     return {
         "version": 2,
-        # radio = Skala, Frequenzen, SDR, Wache
+        # Funk-Teil (satellit.funk): Web-SDR-Empfänger, Wache, SAME, HFCC,
+        # Übersetzer. Aus = schlichtes Grundgerät für Praxis, Hospiz, Laden …
+        "funk": {"enabled": False},
         # program = Wochenplan, Musik, Ansagen – keine Funkbegriffe
-        "mode": "radio",
+        # radio = Skala, Frequenzen, SDR, Wache (nur mit Funk-Teil)
+        "mode": "program",
         "media_dir": None,           # None = Unterordner "media" neben config.json
         "fallback": "musik",         # Ersatz, wenn das Programm ausfällt (offline);
                                      # ein Sender kann mit "fallback" einen eigenen haben
@@ -58,22 +63,21 @@ def default_config() -> dict[str, Any]:
             # Lokale Musik – läuft ohne Internet, Standard-Ersatzquelle
             {"id": "musik", "name": "Musik (lokal)", "kind": "folder",
              "path": "musik", "freq": 90.0},
+            # Naturklänge zum sanften Wecken: Dateien in den Ordner media/voegel
+            {"id": "voegel", "name": "Vogelgesang (lokal)", "kind": "folder",
+             "path": "voegel", "freq": 88.0},
             # UKW = Internet-Stream; freq = Position auf der Skala (MHz)
             {"id": "fm1", "name": "Beispiel UKW", "kind": "stream",
              "url": "https://example.org/stream.mp3", "freq": 98.4, "gain": 0.8},
-            # Mittelwelle live von einem KiwiSDR
-            {"id": "mw1", "name": "AM Nachtprogramm", "kind": "kiwi",
-             "host": "kiwisdr.example.org:8073", "freq_khz": 783, "mode": "am",
-             "freq": 0.783, "gain": 1.2},
-            # Kurzwelle von einer UberSDR-Instanz
-            {"id": "sw1", "name": "UberSDR 49m", "kind": "ubersdr",
-             "host": "ubersdr.example.org:8080", "freq_khz": 6155, "mode": "am",
-             "freq": 6.155, "gain": 1.1},
+            # Web-SDR-Empfänger (kind kiwi/ubersdr/websdr) gehören zum Funk-Teil,
+            # Beispiele in README.md
         ],
         "schedule": {
             "enabled": True,
             "entries": [
-                {"time": "06:30", "station": "mw1", "fade": 90.0, "wake": True},
+                # Wecken: eine Stunde lang von ganz leise auf normal
+                {"time": "06:30", "station": "voegel", "fade": 3600.0, "wake": True,
+                 "label": "Vogelgesang zum Aufwachen"},
                 {"time": "08:30", "station": "fm1", "fade": 8.0},
                 {"time": "23:00", "action": "sleep", "fade": 120.0},
                 # Beispiel-Einspielung (aus): Gong + Ansage werktags um 10:00
@@ -137,6 +141,7 @@ class Config:
     def __init__(self, path: str | os.PathLike | None = None):
         self.path = Path(path) if path else default_config_path()
         self._lock = threading.Lock()
+        self._dirty = False
         self.data: dict[str, Any] = default_config()
 
     def load(self) -> "Config":
@@ -145,6 +150,14 @@ class Config:
                 try:
                     loaded = json.loads(self.path.read_text(encoding="utf-8"))
                     self.data = _merge(default_config(), loaded)
+                    if "funk" not in loaded:
+                        # ältere Konfiguration: wer schon Web-SDR-Sender hat, behält
+                        # den Funk-Teil samt gewohnter Radio-Ansicht
+                        sdr = any(st.get("kind") in FUNK_KINDS
+                                  for st in loaded.get("stations", []))
+                        self.data["funk"] = {"enabled": sdr}
+                        self.data["mode"] = loaded.get("mode", "radio") if sdr else "program"
+                        self._dirty = True
                 except (json.JSONDecodeError, OSError) as exc:
                     # kaputte Datei nicht wegwerfen: beiseitelegen, Default nehmen
                     try:
@@ -155,8 +168,9 @@ class Config:
                           file=sys.stderr)
             else:
                 self._write_unlocked()   # Lock schon gehalten
-            if self._normalize():
+            if self._normalize() or self._dirty:
                 self._write_unlocked()
+            self._dirty = False
         return self
 
     def _normalize(self) -> bool:

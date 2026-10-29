@@ -38,3 +38,27 @@ class SilenceSource(Source):
     @property
     def ready(self) -> bool:
         return True
+
+
+class ErrorSource(SilenceSource):
+    """Platzhalter für einen Sender, der so nicht spielen kann (unvollständig,
+    unbekannte Art, Funk-Teil aus). Bleibt beim Start im Fehlerzustand – die
+    Engine nimmt dann den Ersatz, und die Oberfläche zeigt den Grund."""
+
+    kind = "error"
+
+    def __init__(self, name: str, error: str):
+        super().__init__(name=name)
+        self.error = error
+        self.status = "error"
+
+    def start(self) -> "ErrorSource":
+        self.started_at = time.time()
+        return self
+
+    def stop(self) -> None:
+        pass
+
+    @property
+    def ready(self) -> bool:
+        return False

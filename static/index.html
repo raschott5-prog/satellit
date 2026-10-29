@@ -294,7 +294,8 @@ footer a{color:var(--accent)}
 
   <footer><span id="foot">Satellit</span> ·
     <a href="/programm" class="toProg">Programm-Ansicht</a> ·
-    <a href="/static/schlicht.html">schlichte Ansicht</a></footer>
+    <a href="/static/schlicht.html">schlichte Ansicht</a> ·
+    <a href="/programm" id="funkOff">Funk-Teil ausschalten</a></footer>
 </main>
 <div class="toast" id="toast"></div>
 
@@ -562,7 +563,9 @@ function renderSame(sm){
 function clock(){ $("#lcd-clock").textContent=new Date().toLocaleTimeString("de-AT",{hour:"2-digit",minute:"2-digit"}); }
 setInterval(clock,1000); clock();
 
-async function poll(){ try{ render(await api("/api/state")); }catch(e){ $("#lcd-sub").textContent="Keine Verbindung zum Radio-Dienst"; $("#led").className="led"; } }
+async function poll(){ try{ const st=await api("/api/state");
+  if(st.funk && !st.funk.enabled){ location.href="/programm"; return; }   // Funk-Teil aus
+  render(st); }catch(e){ $("#lcd-sub").textContent="Keine Verbindung zum Radio-Dienst"; $("#led").className="led"; } }
 setInterval(poll,1000);
 window.addEventListener("resize",()=>placePointer(activeStation()));
 
@@ -600,6 +603,9 @@ $("#tr-model").onchange=ev=>{
 };
 $("#tr-clear").onclick=()=>api("/api/translate",{clear:true}).then(()=>{trKey="";poll();});
 $("#same-test").onclick=()=>api("/api/same/test",{event:$("#same-ev").value,area:true}).then(()=>toast("Test-Alarm eingespeist"));
+document.getElementById("funkOff").onclick=ev=>{ev.preventDefault();
+  if(confirm("Funk-Teil ausschalten? Kiwi, Wache, SAME und Übersetzer gehen aus; zurück geht es in der Programm-Ansicht."))
+    api("/api/funk",{enabled:false}).then(()=>location.href="/programm");};
 document.querySelectorAll(".toProg").forEach(a=>a.onclick=ev=>{ev.preventDefault();api("/api/mode",{mode:"program"}).then(()=>location.href="/programm");});
 
 loadConfig().then(poll);

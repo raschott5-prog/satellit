@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from satellit.sources.kiwi import KIWI_RATE, adpcm_encode   # noqa: E402
+from satellit.funk.kiwi import KIWI_RATE, adpcm_encode   # noqa: E402
 
 _GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 

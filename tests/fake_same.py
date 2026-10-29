@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from satellit.same import SAMEGenerator, SAMPLE_RATE, build_header   # noqa: E402
+from satellit.funk.same import SAMEGenerator, SAMPLE_RATE, build_header   # noqa: E402
 
 
 def main(argv=None) -> int:

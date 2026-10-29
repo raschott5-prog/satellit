@@ -1,12 +1,14 @@
-"""Engine: verbindet Quellen, Mixer, Zeitplan, Wache, SAME, Übersetzer und Einspielungen.
+"""Engine: verbindet Quellen, Mixer, Zeitplan und Einspielungen.
 
 Prioritätsleiter (höher gewinnt) für das, was *läuft*:
 
-    4  SAME EAN           nationaler Notfall – schlägt alles
-    3  SAME-Warnung       Tornado/Sturzflut … fürs eigene Gebiet
-    2  Wache              Betrieb auf einem beobachteten Kanal
     1  Hand/Zeitplan      Basisauswahl (Hand gilt bis zum nächsten Eintrag)
     0  Schlummern         Master langsam auf 0
+
+Der **Funk-Teil** (``satellit.funk``: Web-SDR-Empfänger, Wache, SAME,
+HFCC-Sendeplan, Übersetzer) ist abschaltbar (``"funk": {"enabled": …}``).
+Ist er an, legt er seine Schichten (Wache 2, SAME 3–4) über das Programm;
+ist er aus, wird er gar nicht erst geladen.
 
 Darüber liegt die **Einspielungs-Ebene** (Ansagen, Gong, eigene Aufnahmen).
 Sie ersetzt das Programm nicht, sondern legt sich darüber (Musik wird
@@ -44,16 +46,12 @@ import numpy as np
 from .audio import BLOCK, SAMPLE_RATE
 from .media import ensure_demo, resolve as media_resolve
 from .mixer import Mixer
-from .same import SAMEStream
 from .scheduler import Scheduler
-from .sources import Source, StreamSource, make_source
+from .sources import FUNK_KINDS, Source, make_source
 from .sources.file import FileSource
 from .sources.silence import SilenceSource
-from . import hfcc as hfcc_mod
-from .translate import Translator
-from .watcher import Watcher, WatchChannel
 
-L_SLEEP, L_BASE, L_WATCH, L_SAME_WARN, L_SAME_EAN = 0, 1, 2, 3, 4
+L_SLEEP, L_BASE = 0, 1
 RETRY_SECONDS = 60.0
 #: Nicht mehr gehörte Quellen nach so vielen Sekunden schließen. Jede offene
 #: Kiwi-Verbindung belegt einen der wenigen Plätze eines fremden Empfängers.
@@ -82,8 +80,6 @@ class Engine:
         # Schichten
         self.base = {"mode": "off"}
         self.manual_active = False
-        self.layer_watch: Optional[dict] = None
-        self.layer_same: Optional[dict] = None
         self._applied_occurrence = None
         self.fallback_active = False
         self._wake_from_zero = False   # Weck-Eintrag: erst auf 0, dann einblenden
@@ -101,26 +97,12 @@ class Engine:
         self._pending: Optional[dict] = None
         self.log: collections.deque = collections.deque(maxlen=100)
 
-        self.watcher = Watcher(config.data.get("watcher", {}),
-                               on_activity=self._on_watch_activity,
-                               on_clear=self._on_watch_clear,
-                               is_listening=self._is_listening)
-        self._same_streams: list[tuple[Source, SAMEStream]] = []
-        self.last_same: list[dict] = []
-
-        self.hfcc = hfcc_mod.HFCC(
-            config.path.parent / "hfcc",
-            base_url=config.get("hfcc", "base_url", default=hfcc_mod.DEFAULT_BASE),
-            refresh_days=float(config.get("hfcc", "refresh_days", default=7)),
-            log=self._log)
-        self._on_air_cache: tuple[float, dict] = (0.0, {})
-        self.translator = Translator(config.data.get("translate", {}),
-                                     label_fn=lambda: self.committed_label, log=self._log,
-                                     hint_fn=self._language_hint)
-        self.mixer.tap = self.translator.feed
+        #: Funk-Teil (satellit.funk.funkteil.Funkteil) – None, solange aus
+        self.funk = None
+        if config.get("funk", "enabled", default=False):
+            self._load_funk()
 
         self._control = threading.Thread(target=self._control_loop, name="engine", daemon=True)
-        self._same_thread = threading.Thread(target=self._same_loop, name="same", daemon=True)
         self._stop = threading.Event()
         self._start_time = time.time()
         self.started = False
@@ -140,28 +122,22 @@ class Engine:
         self._committed_source = self.mixer.deck_a.source
         self._init_base()
         self._last_due_check = datetime.now()
-        if self.config.get("mode", default="radio") == "radio":
-            self._start_same_monitors()
-            if self.config.get("watcher", "enabled", default=True):
-                self.watcher.start()
         self._control.start()
-        self._same_thread.start()
-        self.translator.start()
+        if self.funk is not None:
+            self.funk.start()
         if self.output is not None:
             self.output.start(self.render)
         self._log("gestartet")
 
     def stop(self) -> None:
         self._stop.set()
-        self.watcher.stop()
-        self.translator.stop()
+        if self.funk is not None:
+            self.funk.stop()
         if self.output is not None:
             self.output.stop()
         self._end_oneshot(None, quiet=True)
         for s in list(self._sources.values()):
             s.stop()
-        for src, _ in self._same_streams:
-            src.stop()
         self.started = False
 
     def render(self, frames: int = BLOCK) -> np.ndarray:
@@ -169,6 +145,39 @@ class Engine:
 
     def _log(self, text: str) -> None:
         self.log.appendleft({"t": datetime.now().strftime("%d.%m. %H:%M:%S"), "text": text})
+
+    # =====================================================================
+    # Funk-Teil ein/aus
+    # =====================================================================
+    def _load_funk(self) -> None:
+        from .funk.funkteil import Funkteil     # erst hier: Grundgerät braucht ihn nicht
+        self.funk = Funkteil(self)
+
+    def set_funk(self, enabled: bool) -> None:
+        """Funk-Teil zur Laufzeit ein- oder ausschalten (Schalter in der Oberfläche)."""
+        enabled = bool(enabled)
+        self.config.update({"funk": {"enabled": enabled}})
+        if enabled == (self.funk is not None):
+            return
+        if enabled:
+            self.config.update({"mode": "radio"})    # die Funk-Ansicht zeigen
+            self._load_funk()
+            if self.started:
+                self.funk.start()
+            self._log("Funk-Teil eingeschaltet")
+            return
+        funk, self.funk = self.funk, None
+        funk.stop()
+        if self.config.get("mode", default="radio") == "radio":
+            self.config.update({"mode": "program"})
+        # Web-SDR-Quellen schließen; lief eine, übernimmt der Ersatz
+        with self._lock:
+            sdr = [sid for sid in self._sources
+                   if (self.config.station(sid) or {}).get("kind") in FUNK_KINDS]
+            closing = [self._sources.pop(sid) for sid in sdr]
+        for src in closing:
+            threading.Thread(target=src.stop, name="funk-aus", daemon=True).start()
+        self._log("Funk-Teil ausgeschaltet")
 
     # =====================================================================
     # Basisauswahl / Zeitplan
@@ -218,7 +227,8 @@ class Engine:
             spec = self.config.station(station_id)
             if spec is None:
                 return None
-            src = make_source(spec, uuid=self.uuid, media_dir=self.config.media_dir).start()
+            src = make_source(spec, uuid=self.uuid, media_dir=self.config.media_dir,
+                              funk=self.funk is not None).start()
             self._sources[station_id] = src
             return src
 
@@ -243,11 +253,8 @@ class Engine:
         return True
 
     def back_to_program(self) -> None:
-        if self.layer_watch:
-            ch = self.layer_watch.get("channel")
-            if ch:
-                self.watcher.dismiss(ch)
-            self._release_watch()
+        if self.funk is not None:
+            self.funk.back_to_program()
 
     def set_volume(self, value: float) -> None:
         self.mixer.set_volume(value)
@@ -275,126 +282,9 @@ class Engine:
             self._log(f"{len(self.queue)} wartende Einspielung(en) verworfen")
             self.queue.clear()
 
-    def set_translate(self, enabled: bool) -> None:
-        self.translator.set_enabled(enabled)
-        self.config.update({"translate": {"enabled": bool(enabled)}})
-
-    def set_translate_model(self, model: str) -> None:
-        self.config.update({"translate": {"model": model}})
-        self.translator.apply(self.config.data.get("translate", {}))
-        self._log(f"Übersetzer: Modell {model}")
-
-    # =====================================================================
-    # Sendeplan (HFCC)
-    # =====================================================================
-    def on_air(self, station_id: Optional[str]) -> list[dict]:
-        """Was laut HFCC gerade auf der Frequenz dieses Kiwi/UberSDR-Senders läuft."""
-        spec = self.config.station(station_id) if station_id else None
-        if not spec or spec.get("kind") not in ("kiwi", "ubersdr") or not spec.get("freq_khz"):
-            return []
-        if not self.config.get("hfcc", "enabled", default=True):
-            return []
-        self.hfcc.ensure()                 # lädt beim ersten Bedarf im Hintergrund
-        return self.hfcc.on_air(float(spec["freq_khz"]))
-
     def _current_station(self) -> Optional[str]:
         key = self._committed_key or ""
         return key.split(":", 1)[1] if key[:3] in ("st:", "fb:") else None
-
-    def _language_hint(self) -> Optional[list]:
-        return hfcc_mod.candidates(self.on_air(self._current_station()))
-
-    def _on_air_all(self) -> dict:
-        """Für die Anzeige: alle Kurzwellensender, höchstens alle 30 s neu."""
-        t, cached = self._on_air_cache
-        if time.time() - t < 30:
-            return cached
-        out = {}
-        for spec in self.config.data.get("stations", []):
-            hits = self.on_air(spec.get("id"))
-            if hits:
-                out[spec["id"]] = hits[:4]
-        self._on_air_cache = (time.time(), out)
-        return out
-
-    # =====================================================================
-    # Wache
-    # =====================================================================
-    def _on_watch_activity(self, ch: WatchChannel) -> None:
-        src = make_source({"kind": "kiwi", "host": ch.host, "freq_khz": ch.freq_khz,
-                           "mode": ch.mode, "name": ch.name}).start()
-        self.layer_watch = {"channel": ch, "source": src, "label": ch.name}
-        self._log(f"Wache: Betrieb auf {ch.name}")
-
-    def _on_watch_clear(self, ch: WatchChannel) -> None:
-        if self.layer_watch and self.layer_watch.get("channel") is ch:
-            self._release_watch()
-
-    def _release_watch(self) -> None:
-        if self.layer_watch:
-            src = self.layer_watch.get("source")
-            if isinstance(src, Source):
-                src.stop()
-        self.layer_watch = None
-
-    def _is_listening(self, ch: WatchChannel) -> bool:
-        src = self.mixer.active_deck().source
-        host = getattr(src, "host", None)
-        fk = getattr(src, "freq_khz", None)
-        return bool(host and fk and
-                    (host.split("://")[-1], round(float(fk), 1)) == ch.key())
-
-    # =====================================================================
-    # SAME
-    # =====================================================================
-    def _start_same_monitors(self) -> None:
-        same = self.config.data.get("same", {})
-        if not same.get("enabled", True):
-            return
-        for spec in same.get("sources", []):
-            if spec.get("kind", "stream") != "stream" or not spec.get("url"):
-                continue
-            src = StreamSource(url=spec["url"], name=spec.get("name", "NWR")).start()
-            self._same_streams.append((src, SAMEStream(on_header=self._on_same_header)))
-
-    def _same_loop(self) -> None:
-        period = BLOCK / SAMPLE_RATE
-        while not self._stop.is_set():
-            any_audio = False
-            for src, stream in self._same_streams:
-                block = src.read(BLOCK)
-                if np.any(block):
-                    any_audio = True
-                stream.feed(block)
-            time.sleep(period if any_audio else period * 2)
-
-    def _on_same_header(self, header) -> None:
-        if header.is_eom:
-            if self.layer_same:
-                self.layer_same["until"] = time.time()
-            return
-        same = self.config.data.get("same", {})
-        events = same.get("events", {})
-        self.last_same.insert(0, header.as_dict())
-        self.last_same = self.last_same[:20]
-        ev = header.event
-        is_ean = ev == "EAN"
-        if ev in events.get("tests", []):
-            return
-        if not (is_ean or header.matches_area(same.get("fips", []))):
-            return
-        if ev in events.get("watches", []) and not is_ean:
-            return
-        srcs = same.get("sources") or [{}]
-        spec = srcs[0]
-        src = StreamSource(url=spec.get("url", ""), name="SAME").start() \
-            if spec.get("url") else SilenceSource(name="SAME").start()
-        self.layer_same = {"header": header, "source": src,
-                           "label": f"⚠ {header.event_name()}",
-                           "level": L_SAME_EAN if is_ean else L_SAME_WARN,
-                           "until": time.time() + max(60, header.purge_minutes() * 60),
-                           "fade": same.get("fade_seconds", 3.0)}
-        self._log(f"SAME: {header.event_name()} – übernimmt")
 
     # =====================================================================
     # Einspielungen
@@ -433,13 +323,14 @@ class Engine:
         release_s = float(ann.get("release_seconds", 1.5))
         max_delay = float(ann.get("max_delay_minutes", 10)) * 60
 
-        if self.layer_same and self.oneshot:
+        alarm = self.funk is not None and self.funk.alarm
+        if alarm and self.oneshot:
             self._end_oneshot("abgebrochen (Alarm)")
             return
 
         os_ = self.oneshot
         if os_ is None:
-            if not self.queue or self.mixer.muted or self.layer_same:
+            if not self.queue or self.mixer.muted or alarm:
                 return
             item = self.queue.popleft()
             if time.time() - item["due"] > max_delay:
@@ -545,11 +436,8 @@ class Engine:
                 self._apply_entry(occ[1])
             self._check_due(now)
 
-        if self.layer_same and time.time() >= self.layer_same["until"]:
-            src = self.layer_same.get("source")
-            if isinstance(src, Source):
-                src.stop()
-            self.layer_same = None
+        if self.funk is not None:
+            self.funk.tick()
 
         self._tick_oneshot()
         desired = self._resolve()
@@ -577,14 +465,9 @@ class Engine:
             threading.Thread(target=src.stop, name="close-idle", daemon=True).start()
 
     def _resolve(self) -> dict:
-        if self.layer_same:
-            s = self.layer_same
-            return {"key": "same", "source": s["source"], "label": s["label"],
-                    "reason": "SAME", "fade": s["fade"], "level": s["level"]}
-        if self.layer_watch:
-            w = self.layer_watch
-            return {"key": "watch:" + w["label"], "source": w["source"],
-                    "label": w["label"], "reason": "Wache", "fade": 4.0, "level": L_WATCH}
+        layer = self.funk.layer() if self.funk is not None else None
+        if layer is not None:
+            return layer
         if self.base.get("mode") == "station":
             sid = self.base["id"]
             src = self._source_for_station(sid)
@@ -697,8 +580,10 @@ class Engine:
             oneshot = {"label": os_["item"]["label"], "phase": os_["phase"],
                        "file": os_["item"]["files"][min(os_["idx"],
                                                         len(os_["item"]["files"]) - 1)]}
-        return {
-            "mode": self.config.get("mode", default="radio"),
+        funk = self.funk is not None
+        out = {
+            "mode": self.config.get("mode", default="radio") if funk else "program",
+            "funk": {"enabled": funk, "missing": self._funk_missing()},
             "playing": {
                 "label": self.committed_label, "reason": self.committed_reason,
                 "title": getattr(src, "current", None),
@@ -715,16 +600,15 @@ class Engine:
             "oneshot": oneshot,
             "queue": [q["label"] for q in self.queue],
             "schedule": {**self.scheduler.state(), "missing": self._missing_files()},
-            "on_air": self._on_air_all(),
-            "on_air_now": self._current_station(),
-            "hfcc": self.hfcc.state(),
-            "watcher": self.watcher.state(),
-            "same": {"enabled": self.config.get("same", "enabled", default=True),
-                     "fips": self.config.get("same", "fips", default=[]),
-                     "recent": self.last_same[:10],
-                     "active": self.layer_same["label"] if self.layer_same else None},
-            "translate": self.translator.state(),
             "sources": {sid: s.describe() for sid, s in self._sources.items()},
             "log": list(self.log)[:30],
             "uptime": round(time.time() - self._start_time, 1),
         }
+        if self.funk is not None:
+            out.update(self.funk.state())
+        return out
+
+    @staticmethod
+    def _funk_missing() -> list[str]:
+        from .funk import missing_packages     # leichtgewichtig, lädt nichts Schweres
+        return missing_packages()

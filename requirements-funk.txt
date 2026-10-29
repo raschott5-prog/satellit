@@ -1,0 +1,13 @@
+# Funk-Teil (Schalter „Funk & Kurzwelle“): zusätzlich zu requirements.txt
+#   pip install -r requirements.txt -r requirements-funk.txt
+# Fehlt ein Paket, läuft der Funk-Teil trotzdem – nur die Funktion meldet es.
+
+# --- Web-SDR-Empfänger -----------------------------------------------------
+websocket-client>=1.5     # KiwiSDR, UberSDR, WebSDR (DevTools des Browsers)
+opuslib>=3.0              # UberSDR mit format=opus (braucht libopus)
+# WebSDR (PA3FWM) braucht außerdem Chromium sowie pactl/parec (nur Linux).
+
+# --- Übersetzer ------------------------------------------------------------
+# Sprache erkennen und ins Englische übersetzen, offline auf der CPU.
+# Lädt beim ersten Einschalten das Whisper-Modell (small: ~460 MB).
+faster-whisper>=1.0

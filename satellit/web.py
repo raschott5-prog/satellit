@@ -2,7 +2,8 @@
 
 Seiten
   GET  /                    je nach Modus Radio- oder Programm-Oberfläche
-  GET  /radio, /programm    eine bestimmte Oberfläche
+                            (Funk-Teil aus: immer die Programm-Oberfläche)
+  GET  /radio, /programm    eine bestimmte Oberfläche (/radio nur mit Funk-Teil)
   GET  /static/<datei>      statische Dateien
   GET  /media/<datei>       Einspielung für die Vorschau im Browser
 
@@ -17,9 +18,11 @@ Zustand / Bedienung
                             oder {"entry": id} – Einspielung im Raum abspielen
   POST /api/oneshot/stop    laufende Einspielung stoppen, Warteschlange leeren
   POST /api/entry           {"id": id, "enabled": bool} / {"id": id, "skip_today": bool}
-  POST /api/mode            {"mode": "radio"|"program"}
+  POST /api/mode            {"mode": "radio"|"program"}  ("radio" nur mit Funk-Teil)
+  POST /api/funk            {"enabled": true|false} – Funk-Teil ein-/ausschalten
   GET  /api/media           Medienliste
   PUT  /api/media/<name>    Datei hochladen (Rohdaten, max. 50 MB)
+Nur mit eingeschaltetem Funk-Teil (sonst 409):
   POST /api/same/test       {"event": "TOR", "area": true}
   POST /api/translate       {"enabled": true|false}, {"clear": true} und/oder
                             {"model": "small"|"medium"|…}
@@ -42,7 +45,6 @@ from urllib.parse import unquote
 from . import __version__
 from .media import MAX_UPLOAD, list_media, resolve, safe_name
 from .output import list_devices
-from .translate import MODELS
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 PAGES = {"radio": "index.html", "program": "program.html"}
@@ -97,17 +99,34 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _redirect(self, where: str):
+        self.send_response(303)
+        self.send_header("Location", where)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def _no_funk(self) -> bool:
+        """Funk-Schnittstelle bei ausgeschaltetem Funk-Teil: 409 und True."""
+        if self.engine.funk is None:
+            self._json({"error": "Funk-Teil ist ausgeschaltet"}, 409)
+            return True
+        return False
+
     def _path(self) -> str:
         return unquote(self.path.split("?", 1)[0])
 
     # --- GET --------------------------------------------------------------
     def do_GET(self):
         p = self._path()
+        funk = getattr(self.engine, "funk", None) is not None
         if p in ("/", "/index.html"):
-            mode = self.config.get("mode", default="radio")
+            mode = self.config.get("mode", default="radio") if funk else "program"
             self._file(STATIC_DIR / PAGES.get(mode, "index.html"))
         elif p == "/radio":
-            self._file(STATIC_DIR / "index.html")
+            if funk:
+                self._file(STATIC_DIR / "index.html")
+            else:
+                self._redirect("/programm")
         elif p in ("/programm", "/program"):
             self._file(STATIC_DIR / "program.html")
         elif p.startswith("/static/"):
@@ -156,27 +175,40 @@ class _Handler(BaseHTTPRequestHandler):
             if mode not in PAGES:
                 self._json({"error": "mode"}, 400)
                 return
+            if mode == "radio" and self._no_funk():
+                return
             self.config.update({"mode": mode})
             self._json({"ok": True, "mode": mode})
         elif p == "/api/config":
+            if "funk" in b:            # Schalter nur über /api/funk (startet/stoppt Dienste)
+                b = {k: v for k, v in b.items() if k != "funk"}
             self.config.update(b)
             eng.reload_schedule()
-            eng.watcher.apply(self.config.data.get("watcher", {}))
-            eng.translator.apply(self.config.data.get("translate", {}))
+            if eng.funk is not None:
+                eng.funk.apply(self.config.data)
             self._json({"ok": True})
+        elif p == "/api/funk":
+            eng.set_funk(bool(b.get("enabled", False)))
+            self._json({"ok": True, "enabled": eng.funk is not None,
+                        "missing": eng._funk_missing()})
         elif p == "/api/same/test":
-            self._same_test(b)
+            if not self._no_funk():
+                self._same_test(b)
         elif p == "/api/translate":
+            if self._no_funk():
+                return
+            from .funk.translate import MODELS
+            funk = eng.funk
             if b.get("clear"):
-                eng.translator.clear()
+                funk.translator.clear()
             if "model" in b:
                 if b["model"] not in MODELS:
                     self._json({"error": "model"}, 400)
                     return
-                eng.set_translate_model(b["model"])
+                funk.set_translate_model(b["model"])
             if "enabled" in b:
-                eng.set_translate(bool(b["enabled"]))
-            self._json({"ok": True, "enabled": eng.translator.enabled})
+                funk.set_translate(bool(b["enabled"]))
+            self._json({"ok": True, "enabled": funk.translator.enabled})
         else:
             self._json({"error": "unknown"}, 404)
 
@@ -250,7 +282,7 @@ class _Handler(BaseHTTPRequestHandler):
         self._json({"ok": True})
 
     def _same_test(self, body):
-        from .same import build_header, parse_header
+        from .funk.same import build_header, parse_header
         event = str(body.get("event", "RWT"))[:3].upper()
         fips = self.config.get("same", "fips", default=["000000"])
         loc = fips[0] if body.get("area", True) and fips else "000000"
@@ -258,7 +290,7 @@ class _Handler(BaseHTTPRequestHandler):
                            purge="0030", station="KEC55")
         parsed = parse_header(hdr)
         if parsed:
-            self.engine._on_same_header(parsed)
+            self.engine.funk._on_same_header(parsed)
         self._json({"ok": bool(parsed), "header": hdr})
 
 

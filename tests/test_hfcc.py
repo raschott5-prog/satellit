@@ -6,7 +6,7 @@ import time
 import zipfile
 from datetime import date, datetime, timezone
 
-from satellit import hfcc
+from satellit.funk import hfcc
 from satellit.config import Config
 from satellit.engine import Engine
 from satellit.output import SilentOutput
@@ -96,12 +96,13 @@ def test_engine_hint_for_shortwave_station(tmp_path):
     c = Config(path=os.path.join(tmp_path, "c.json"))
     c.data["stations"] = [{"id": "k", "name": "CRI", "kind": "kiwi", "host": "x", "freq_khz": 7225},
                           {"id": "s", "name": "Stream", "kind": "stream", "url": "http://x"}]
+    c.data["funk"] = {"enabled": True}
     c.data["schedule"]["enabled"] = False
     eng = Engine(c, output=SilentOutput())
-    eng.hfcc.fetch = lambda url: _zip(ROWS)
-    eng.hfcc._load(hfcc.season_for(datetime.now(UTC).date()))
+    eng.funk.hfcc.fetch = lambda url: _zip(ROWS)
+    eng.funk.hfcc._load(hfcc.season_for(datetime.now(UTC).date()))
     eng._committed_key = "st:k"
-    assert eng.on_air("s") == []
-    expected = eng.hfcc.on_air(7225)
-    assert [e["short"] for e in eng.on_air("k")] == [e["short"] for e in expected]
-    assert eng._language_hint() == hfcc.candidates(expected)
+    assert eng.funk.on_air("s") == []
+    expected = eng.funk.hfcc.on_air(7225)
+    assert [e["short"] for e in eng.funk.on_air("k")] == [e["short"] for e in expected]
+    assert eng.funk._language_hint() == hfcc.candidates(expected)

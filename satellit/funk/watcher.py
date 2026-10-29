@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .sources.kiwi import probe_smeter
+from .kiwi import probe_smeter
 
 
 @dataclass

@@ -9,7 +9,7 @@ import pytest
 from satellit.config import Config
 from satellit.engine import Engine
 from satellit.output import SilentOutput
-from satellit.same import build_header, parse_header
+from satellit.funk.same import build_header, parse_header
 
 
 def _engine(tmp_path):
@@ -18,6 +18,7 @@ def _engine(tmp_path):
         {"id": "a", "name": "Rauschen", "kind": "noise", "noise": 0.05, "freq": 98.4},
         {"id": "b", "name": "Stille", "kind": "silence", "freq": 0.783},
     ]
+    c.data["funk"] = {"enabled": True}
     c.data["schedule"]["enabled"] = False
     c.data["watcher"]["enabled"] = False
     c.data["same"]["sources"] = []
@@ -47,9 +48,9 @@ def test_same_warning_takes_over_in_area(tmp_path):
         eng.tune("a")
         time.sleep(0.5)
         hdr = parse_header(build_header(event="TOR", locations=["024031"]))
-        eng._on_same_header(hdr)
+        eng.funk._on_same_header(hdr)
         time.sleep(0.6)
-        assert eng.layer_same is not None
+        assert eng.funk.layer_same is not None
         assert "Tornadowarnung" in eng.committed_label
         assert eng.committed_reason == "SAME"
     finally:
@@ -62,9 +63,9 @@ def test_same_ignores_foreign_area(tmp_path):
     try:
         eng.tune("a")
         time.sleep(0.4)
-        eng._on_same_header(parse_header(build_header(event="TOR", locations=["099999"])))
+        eng.funk._on_same_header(parse_header(build_header(event="TOR", locations=["099999"])))
         time.sleep(0.3)
-        assert eng.layer_same is None
+        assert eng.funk.layer_same is None
         assert eng.committed_label == "Rauschen"
     finally:
         eng.stop()
@@ -74,10 +75,10 @@ def test_same_test_event_only_logs(tmp_path):
     eng = _engine(tmp_path)
     eng.start()
     try:
-        eng._on_same_header(parse_header(build_header(event="RWT", locations=["024031"])))
+        eng.funk._on_same_header(parse_header(build_header(event="RWT", locations=["024031"])))
         time.sleep(0.3)
-        assert eng.layer_same is None            # keine Übernahme
-        assert any(h["event"] == "RWT" for h in eng.last_same)  # aber protokolliert
+        assert eng.funk.layer_same is None            # keine Übernahme
+        assert any(h["event"] == "RWT" for h in eng.funk.last_same)  # aber protokolliert
     finally:
         eng.stop()
 
@@ -88,11 +89,11 @@ def test_ean_national_takes_over_even_foreign(tmp_path):
     try:
         eng.tune("a")
         time.sleep(0.4)
-        eng._on_same_header(parse_header(build_header(org="PEP", event="EAN",
+        eng.funk._on_same_header(parse_header(build_header(org="PEP", event="EAN",
                                                       locations=["099999"])))
         time.sleep(0.6)
-        assert eng.layer_same is not None
-        assert eng.layer_same["level"] == 4      # L_SAME_EAN
+        assert eng.funk.layer_same is not None
+        assert eng.funk.layer_same["level"] == 4      # L_SAME_EAN
     finally:
         eng.stop()
 

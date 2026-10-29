@@ -1,4 +1,9 @@
-"""Quellen-Fabrik: aus einem Konfig-Eintrag die passende Quelle bauen."""
+"""Quellen-Fabrik: aus einem Konfig-Eintrag die passende Quelle bauen.
+
+Hier liegen nur die Quellen des Grundgeräts. Web-SDR-Empfänger (``kiwi``,
+``ubersdr``, ``websdr``) gehören zum Funk-Teil und werden nur gebaut, wenn
+er eingeschaltet ist (``funk=True``).
+"""
 
 from __future__ import annotations
 
@@ -8,21 +13,26 @@ from pathlib import Path
 
 from .base import Source
 from .file import FileSource, FolderSource
-from .kiwi import KiwiSource
-from .silence import SilenceSource
+from .silence import ErrorSource, SilenceSource
 from .stream import StreamSource
-from .ubersdr import UberSDRSource
 
-__all__ = ["Source", "StreamSource", "KiwiSource", "UberSDRSource",
-           "SilenceSource", "FileSource", "FolderSource", "make_source"]
+__all__ = ["Source", "StreamSource", "SilenceSource", "ErrorSource", "FileSource",
+           "FolderSource", "make_source", "FUNK_KINDS"]
+
+#: gleichlautend mit ``satellit.funk.FUNK_KINDS`` – hier ohne den Funk-Teil zu laden
+FUNK_KINDS = ("kiwi", "ubersdr", "websdr")
+
+
+def _error(name: str, text: str) -> ErrorSource:
+    return ErrorSource(name=name, error=text)
 
 
 def make_source(spec: dict[str, Any], *, uuid: str = "",
-                media_dir: str | Path | None = None) -> Source:
+                media_dir: str | Path | None = None, funk: bool = False) -> Source:
     """Erzeugt eine Quelle aus einem Stations-/Kanal-Dict.
 
-    Unbekannte oder unvollständige Angaben ergeben eine Stillequelle, damit
-    nie etwas abstürzt – der Fehler steht dann im Status.
+    Unbekannte oder unvollständige Angaben ergeben eine ``ErrorSource``, damit
+    nie etwas abstürzt – der Fehler steht im Status, die Engine nimmt den Ersatz.
     """
     kind = spec.get("kind", "stream")
     name = spec.get("name", "")
@@ -33,14 +43,11 @@ def make_source(spec: dict[str, Any], *, uuid: str = "",
     try:
         if kind == "stream":
             return StreamSource(url=spec["url"], name=name, gain=gain, **kw)
-        if kind == "kiwi":
-            return KiwiSource(host=spec["host"], freq_khz=spec["freq_khz"],
-                              mode=spec.get("mode", "am"), name=name, gain=gain,
-                              password=spec.get("password", ""), **kw)
-        if kind == "ubersdr":
-            return UberSDRSource(host=spec["host"], freq_khz=spec["freq_khz"],
-                                 mode=spec.get("mode", "am"), name=name, gain=gain,
-                                 user_session_id=uuid, **kw)
+        if kind in FUNK_KINDS:
+            if not funk:
+                return _error(name or kind, "gehört zum Funk-Teil – der ist ausgeschaltet")
+            from ..funk import make_source as make_funk_source
+            return make_funk_source(spec, uuid=uuid, **kw)
         if kind in ("file", "folder"):
             p = Path(spec["path"])
             if not p.is_absolute() and media_dir is not None:
@@ -54,11 +61,7 @@ def make_source(spec: dict[str, Any], *, uuid: str = "",
             return SilenceSource(name=name or "—",
                                  noise=float(spec.get("noise", 0.0)))
     except KeyError as exc:
-        s = SilenceSource(name=name or "(unvollständig)")
-        s.error = f"Feld fehlt: {exc}"
-        s.status = "error"
-        return s
-    s = SilenceSource(name=name or f"(unbekannt: {kind})")
-    s.error = f"unbekannte Quellenart: {kind}"
-    s.status = "error"
-    return s
+        return _error(name or "(unvollständig)", f"Feld fehlt: {exc}")
+    except ValueError as exc:
+        return _error(name or "(ungültig)", str(exc))
+    return _error(name or f"(unbekannt: {kind})", f"unbekannte Quellenart: {kind}")

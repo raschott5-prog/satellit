@@ -26,7 +26,7 @@ import time
 import numpy as np
 
 from ..audio import CHANNELS, SAMPLE_RATE
-from .base import Source
+from ..sources.base import Source
 
 HANDOVER_MARGIN = 30.0   # s vor Sitzungsende rechtzeitig überblenden
 

@@ -94,13 +94,24 @@
   .two{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-top:14px}
   @media(max-width:900px){.two{grid-template-columns:1fr}}
   .sr{position:absolute;left:-9999px}
+  .funk{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .funk .what{flex:1;min-width:240px}
+  .funk .what b{display:block}
+  .funk .what span{color:var(--muted);font-size:14px}
+  .toggle{position:relative;width:52px;height:30px;flex:none;border:0;padding:0;
+          border-radius:999px;background:var(--off);cursor:pointer;transition:background .2s}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;
+          border-radius:50%;background:#fff;transition:left .2s}
+  .toggle[aria-checked="true"]{background:var(--accent)}
+  .toggle[aria-checked="true"]::after{left:25px}
+  .toggle:disabled{opacity:.5;cursor:wait}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <span class="brand">Satellit <small>Programm</small></span>
-    <a class="sw" href="/radio" id="toRadio">zur Radio-Ansicht</a>
+    <a class="sw" href="/radio" id="toRadio" hidden>zur Radio-Ansicht</a>
     <span class="clock" id="clock">--:--</span>
   </header>
 
@@ -160,6 +171,16 @@
       <div class="log" id="log"></div>
     </section>
   </div>
+
+  <section class="card funk">
+    <div class="what">
+      <b>Funk &amp; Kurzwelle</b>
+      <span id="funkText">Für Technikfans: Kurzwellen-Empfänger im Internet, Übersetzer,
+        Sendepläne. Für den normalen Betrieb nicht nötig.</span>
+    </div>
+    <button class="toggle" id="funk" role="switch" aria-checked="false"
+            aria-label="Funk und Kurzwelle"></button>
+  </section>
 </div>
 
 <script>
@@ -317,6 +338,15 @@ async function tick(){
   mb.textContent = st.muted ? 'Ton wieder an' : 'Stumm';
   mb.setAttribute('aria-pressed', st.muted ? 'true' : 'false');
 
+  const fk = st.funk || {};
+  const sw = $('#funk');
+  if (!sw.disabled) sw.setAttribute('aria-checked', fk.enabled ? 'true' : 'false');
+  $('#toRadio').hidden = !fk.enabled;
+  $('#funkText').textContent = fk.enabled
+    ? 'Eingeschaltet. Die Radio-Ansicht oben rechts zeigt Empfänger, Skala und Übersetzer.'
+      + (fk.missing && fk.missing.length ? ' Es fehlen Zusatzpakete für: ' + fk.missing.join(', ') + '.' : '')
+    : 'Für Technikfans: Kurzwellen-Empfänger im Internet, Übersetzer, Sendepläne. Für den normalen Betrieb nicht nötig.';
+
   renderWeek(sc);
   $('#log').innerHTML = (st.log || []).slice(0, 15).map(l =>
     `<div><b>${esc(l.t.slice(7))}</b>${esc(l.text)}</div>`).join('') || '<div>—</div>';
@@ -328,6 +358,12 @@ vol.addEventListener('input', () => { volDragging = true; $('#volNum').textConte
 vol.addEventListener('change', () => { api('/api/volume', {value: vol.value / 100}).then(() => { volDragging = false; tick(); }); });
 $('#mute').onclick = () => api('/api/mute', {muted: !$('#mute').classList.contains('on')}).then(tick);
 $('#toRadio').onclick = ev => { ev.preventDefault(); api('/api/mode', {mode:'radio'}).then(() => location.href = '/radio'); };
+$('#funk').onclick = async () => {
+  const sw = $('#funk'), on = sw.getAttribute('aria-checked') !== 'true';
+  sw.disabled = true; sw.setAttribute('aria-checked', on ? 'true' : 'false');
+  try { await api('/api/funk', {enabled: on}); } finally { sw.disabled = false; }
+  if (on) location.href = '/radio'; else tick();
+};
 
 const drop = $('#drop');
 ['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));

@@ -63,6 +63,8 @@ def ensure_demo(media_dir: Path) -> None:
     gong = media_dir / "gong.wav"
     if gong.exists():
         return
+    # nur bei der Ersteinrichtung: Ordner fürs Wecken mit Naturklängen
+    (media_dir / "voegel").mkdir(exist_ok=True)
     sr = 48_000
     t = np.arange(int(sr * 2.4)) / sr
     tone = np.zeros_like(t)

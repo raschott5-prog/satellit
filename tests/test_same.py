@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from satellit import same
+from satellit.funk import same
 
 
 def _hdr(**kw):
@@ -81,7 +81,7 @@ def test_stream_dedups_repeats():
 
 
 def test_adpcm_roundtrip():
-    from satellit.sources.kiwi import adpcm_decode, adpcm_encode
+    from satellit.funk.kiwi import adpcm_decode, adpcm_encode
     t = np.linspace(0, 0.2, 2400, endpoint=False)
     pcm = (np.sin(2 * np.pi * 440 * t) * 20000).astype(np.int16)
     enc = adpcm_encode(pcm, [0, 0])

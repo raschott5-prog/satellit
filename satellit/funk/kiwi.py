@@ -20,7 +20,7 @@ import time
 import numpy as np
 
 from ..audio import CHANNELS, SAMPLE_RATE
-from .base import Source
+from ..sources.base import Source
 
 KIWI_RATE = 12_000           # Standard-Audiorate eines KiwiSDR
 RESAMPLE = SAMPLE_RATE // KIWI_RATE   # 4

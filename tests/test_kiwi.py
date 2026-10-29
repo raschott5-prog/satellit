@@ -3,7 +3,7 @@
 import sys
 import types
 
-from satellit.sources import kiwi
+from satellit.funk import kiwi
 
 
 def _fake_requests(monkeypatch, final_url=None, fail=False):
