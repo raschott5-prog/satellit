@@ -139,3 +139,30 @@ def test_web_switch(server):
     assert b"<html" in urllib.request.urlopen(base + "/radio", timeout=5).read().lower()
     assert _post(base + "/api/funk", {"enabled": False})["enabled"] is False
     assert eng.funk is None
+
+
+def test_first_switch_on_brings_example_stations(tmp_path):
+    c = _cfg(tmp_path)
+    c.data["stations"] = [{"id": "a", "name": "Rauschen", "kind": "noise"}]
+    eng = Engine(c, output=SilentOutput())
+    eng.set_funk(True)
+    try:
+        ex = [s for s in c.data["stations"] if s.get("example")]
+        assert len(ex) >= 4 and all(s["name"].endswith("(Beispiel)") for s in ex)
+        assert all(s["kind"] == "websdr" and s["url"].startswith("http") for s in ex)
+        n = len(c.data["stations"])
+        eng.set_funk(False)
+        eng.set_funk(True)                    # nochmal: nichts doppelt
+        assert len(c.data["stations"]) == n
+    finally:
+        eng.set_funk(False)
+
+
+def test_own_receivers_get_no_examples(tmp_path):
+    c = _cfg(tmp_path)                        # hat schon einen Kiwi-Sender
+    eng = Engine(c, output=SilentOutput())
+    eng.set_funk(True)
+    try:
+        assert not any(s.get("example") for s in c.data["stations"])
+    finally:
+        eng.set_funk(False)

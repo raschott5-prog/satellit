@@ -5,7 +5,7 @@ Weltempfänger – aber seine Sender aus dem Netz holt:
 
 - **„UKW“-Sender** sind Internet-Streams. Man trägt die Stream-Adresse ein und
   die Frequenz, auf der der Sender auf der Skala liegen soll.
-- **Mittel- und Kurzwelle** kommen live von öffentlichen **KiwiSDR**- und
+- **Mittel- und Kurzwelle** (Funk-Teil) kommen live von öffentlichen **KiwiSDR**-, **WebSDR**- und
   **UberSDR**-Empfängern, z. B. der AM-Sender aus der nächsten Großstadt.
 - **Hörfahrplan**: Um 6:30 sanft mit AM wecken, um 8:30 auf den „UKW“-Sender
   überblenden, um 23 Uhr langsam ausblenden.
@@ -27,6 +27,22 @@ Weltempfänger – aber seine Sender aus dem Netz holt:
 
 Bedienung im Browser unter `http://localhost:8080` – auf Windows, Linux und
 dem Raspberry Pi gleich.
+
+### Neu in 0.4
+
+- **Grundgerät und Funk-Teil getrennt**, mit Schalter „Funk & Kurzwelle“
+  (siehe unten). Das Grundgerät kommt ohne Whisper, Websocket & Co. aus.
+- **WebSDR-Quelle** für die PA3FWM-WebSDR (Enschede, Hack Green, NA5B …),
+  über den unveränderten Original-Client im unsichtbaren Browser (Linux).
+- **Beispielsender** beim ersten Einschalten des Funk-Teils: Shannon VOLMET,
+  40 m aus Enschede, spanisches und koreanisches Lokalradio aus Washington,
+  spanisches aus Los Angeles. Zusammen mit dem Übersetzer zeigen sie die
+  Grundidee: Früher übersetzten Auslandsdienste ihr Programm für die Welt –
+  heute hört man das Lokalradio der Welt und übersetzt beim Hörer.
+- Wecken mit Naturklängen als Beispiel im Grundgerät (Ordner `voegel/`,
+  eine Stunde von ganz leise auf normal).
+- Fehlerhafte Sender (unvollständig, Funk-Teil aus) lösen jetzt sauber den
+  Ersatzbetrieb aus, statt still zu spielen.
 
 ### Grundgerät und Funk-Teil
 
@@ -265,7 +281,7 @@ Reiner Dekoder, hängt sich an vorhandene PCM (bevorzugt NWR-Internet-Streams;
 Ohne echtes Signal lässt sich alles über die Oberfläche („Test-Alarm
 einspeisen“) oder die API (`POST /api/same/test`) ausprobieren.
 
-### WebSDR (Enschede, Hack Green, …) – neu
+### WebSDR (Enschede, Hack Green, NA5B, …) – neu in 0.4
 
 PA3FWM erlaubt seinen WebSDR-Client nur unverändert; Nachbau und Reverse
 Engineering sind untersagt. Satellit baut daher nichts nach, sondern lässt
@@ -282,6 +298,23 @@ Engineering sind untersagt. Satellit baut daher nichts nach, sondern lässt
 {"id": "shannon-hg", "name": "Shannon VOLMET 5505 (Hack Green)", "kind": "websdr",
  "url": "http://hackgreensdr.org:8901/", "freq_khz": 5505, "mode": "usb", "buffer": 3}
 ```
+
+**Beispielsender** (`satellit/funk/beispiele.py`) – eingetragen beim ersten
+Einschalten des Funk-Teils, wenn es noch keine eigenen Web-SDR-Sender gibt,
+erkennbar an „(Beispiel)“ und `"example": true`:
+
+| Sender | Empfänger | kHz | Was man hört |
+|---|---|---|---|
+| Shannon VOLMET | Hack Green (GB) | 5505 USB | Flugwetter, rund um die Uhr |
+| 40 m Amateurfunk | Enschede (NL) | 7095 LSB | Funkamateure, abends oft Russisch |
+| Washington 900 AM | NA5B (USA) | 900 AM | Spanisch: Talk, Technik, Werbung |
+| Washington 1310 AM | NA5B (USA) | 1310 AM | Koreanisch: Sport, Gesundheit, Werbung |
+| Los Angeles 1330 AM | KJ6EO (USA) | 1330 AM | Spanisch |
+| Los Angeles 1390 AM | KJ6EO (USA) | 1390 AM | Spanisch |
+
+US-Mittelwelle ist tagsüber (dortiger Zeit) per Bodenwelle stabil; nach
+Sonnenuntergang kommen Schwund und Fremdsender dazu. Die Empfänger gehören
+Funkamateuren und Universitäten – bitte fair nutzen.
 
 Modi: `usb`, `lsb`, `am`, `fm`, `cw`. Vorerst **nur Linux** (braucht `pactl`,
 `parec`, Chromium). Die Serverliste von websdr.org wird bewusst nicht

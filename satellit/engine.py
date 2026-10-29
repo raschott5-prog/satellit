@@ -161,6 +161,11 @@ class Engine:
             return
         if enabled:
             self.config.update({"mode": "radio"})    # die Funk-Ansicht zeigen
+            from .funk import beispiele
+            extra = beispiele.missing_in(self.config.data.get("stations", []))
+            if extra:
+                self.config.update({"stations": self.config.data.get("stations", []) + extra})
+                self._log(f"Funk-Teil: {len(extra)} Beispielsender eingetragen")
             self._load_funk()
             if self.started:
                 self.funk.start()

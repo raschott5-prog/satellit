@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "satellit"
-version = "0.3.0"
+version = "0.4.0"
 description = "Virtuelles Weltempfänger-Radio: UKW-Stream, KiwiSDR/UberSDR, Hörfahrplan, SAME-Wache, Übersetzer"
 readme = "README.md"
 requires-python = ">=3.10"
