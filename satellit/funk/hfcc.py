@@ -71,6 +71,12 @@ def season_for(day: date) -> str:
     return f"b{(y - 1) % 100:02d}"
 
 
+def season_start(season: str) -> date:
+    """Erster Tag einer Saison: "b26" -> letzter Sonntag im Oktober 2026."""
+    year = 2000 + int(season[1:])
+    return _last_sunday(year, 10 if season[0].lower() == "b" else 3)
+
+
 def previous_season(season: str) -> str:
     yy = int(season[1:])
     return f"a{yy:02d}" if season[0] == "b" else f"b{(yy - 1) % 100:02d}"
@@ -253,10 +259,14 @@ class HFCC:
 
     def __init__(self, cache_dir: os.PathLike | str, base_url: str = DEFAULT_BASE,
                  refresh_days: float = 7.0, log: Callable[[str], None] = lambda t: None,
-                 fetch: Optional[Callable[[str], bytes]] = None):
+                 fetch: Optional[Callable[[str], bytes]] = None,
+                 new_season_days: float = 28.0, new_season_refresh_days: float = 1.0):
         self.cache_dir = Path(cache_dir)
         self.base_url = base_url.rstrip("/")
         self.refresh_days = refresh_days
+        # Zum Saisonwechsel bessert die HFCC oft mehrmals nach – dann öfter laden
+        self.new_season_days = new_season_days
+        self.new_season_refresh_days = new_season_refresh_days
         self.log = log
         self.fetch = fetch or self._http_get
         self.schedule: Optional[Schedule] = None
@@ -273,145 +283,19 @@ class HFCC:
     def _file(self, season: str) -> Path:
         return self.cache_dir / f"{season}allx2.zip"
 
-    def ensure(self, background: bool = True) -> None:
-        """Saison laden (aus dem Zwischenspeicher, sonst/zu alt aus dem Netz)."""
-        with self._lock:
-            if self._busy:
-                return
-            season = season_for(datetime.now(timezone.utc).date())
-            fresh = self.schedule is not None and self.schedule.season == season
-            path = self._file(season)
-            stale = not path.exists() or \
-                time.time() - path.stat().st_mtime > self.refresh_days * 86400
-            if fresh and not stale:
-                return
-            self._busy = True
-        if background:
-            threading.Thread(target=self._load, args=(season,), name="hfcc", daemon=True).start()
-        else:
-            self._load(season)
+    def refresh_interval(self, season: str, today: Optional[date] = None) -> float:
+        """Tage bis zum nächsten Nachladen: in den ersten Wochen einer Saison
+        ``new_season_refresh_days`` (Standard täglich), sonst ``refresh_days``."""
+        today = today or datetime.now(timezone.utc).date()
+        alter = (today - season_start(season)).days
+        if 0 <= alter < self.new_season_days:
+            return min(self.refresh_days, self.new_season_refresh_days)
+        return self.refresh_days
 
-    def _fresh(self, season: str) -> bool:
-        p = self._file(season)
-        return p.exists() and time.time() - p.stat().st_mtime <= self.refresh_days * 86400
-
-    def _from_cache(self, season: str) -> bool:
-        try:
-            self.schedule = Schedule(self._file(season).read_bytes(), season)
-            return True
-        except Exception:
-            return False
-
-    def _download(self, season: str) -> bool:
-        try:
-            data = self.fetch(f"{self.base_url}/{season}/{season}allx2.zip")
-            sched = Schedule(data, season)
-        except Exception as exc:
-            self.error = f"{season.upper()}: {exc}"
-            return False
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        tmp = self._file(season).with_suffix(".tmp")
-        tmp.write_bytes(data)
-        os.replace(tmp, self._file(season))
-        self.schedule, self.error = sched, None
-        self.log(f"Sendeplan HFCC {season.upper()} geladen ({sched.rows} Sendungen)")
-        return True
-
-    def _load(self, season: str) -> None:
-        try:
-            # erst der Zwischenspeicher: sofort etwas anzeigen, auch offline
-            if self.schedule is None or self.schedule.season != season:
-                if not (self._file(season).exists() and self._from_cache(season)):
-                    prev = previous_season(season)
-                    if self._file(prev).exists():
-                        self._from_cache(prev)
-            if self._fresh(season):
-                return
-            if self._download(season):
-                return
-            # neue Saison noch nicht veröffentlicht -> die alte tut es solange
-            have = self.schedule.season if self.schedule else None
-            if have != season and not self._fresh(previous_season(season)):
-                self._download(previous_season(season))
-            if self.error:
-                self.log("Sendeplan HFCC nicht ladbar: " + self.error)
-        finally:
-            with self._lock:
-                self._busy = False
-
-    def on_air(self, freq_khz: float, when: Optional[datetime] = None) -> list[dict]:
-        """Sendungen auf ``freq_khz`` (±2 kHz) zum Zeitpunkt (UTC), stärkste zuerst."""
-        when = when or datetime.now(timezone.utc)
-        f = int(round(freq_khz))
-        hits = []
-        for k in range(f - FREQ_TOLERANCE_KHZ, f + FREQ_TOLERANCE_KHZ + 1):
-            for r in self.by_freq.get(k, ()):
-                if _on_air(r, when):
-                    hits.append(self._describe(r))
-        # doppelte Zeilen (gleiche Sendung, mehrere Antennen) zusammenfassen
-        seen, out = set(), []
-        for h in sorted(hits, key=lambda h: -h["power"]):
-            key = (h["broadcaster"], h["lang"], h["site"], h["start"], h["stop"])
-            if key not in seen:
-                seen.add(key)
-                out.append(h)
-        return out
-
-    def _describe(self, r: dict) -> dict:
-        langs = whisper_langs(r["lang"])
-        return {
-            "freq": r["freq"], "start": f'{r["start"]:04d}', "stop": f'{r["stop"]:04d}',
-            "broadcaster": self.broadcasters.get(r["brc"], r["brc"]), "brc": r["brc"],
-            "lang": r["lang"], "lang_name": self.languages.get(r["lang"], r["lang"]),
-            "whisper": langs,
-            "site": self.sites.get(r["loc"], r["loc"]), "power": r["power"],
-            "azimuth": r.get("azimuth", ""),
-        }
-
-
-def candidates(entries: list[dict]) -> Optional[list[str]]:
-    """Whisper-Sprachen, die laut Plan in Frage kommen.
-
-    ``None``, wenn nichts bekannt ist oder eine Sendung eine Sprache hat, die
-    Whisper nicht kennt – dann darf Whisper frei erkennen.
-    """
-    out: list[str] = []
-    for e in entries:
-        for code in e["whisper"]:
-            if code is None:
-                return None
-            if code not in out:
-                out.append(code)
-    return out or None
-
-
-# ---------------------------------------------------------------------------
-# Laden und Zwischenspeichern
-# ---------------------------------------------------------------------------
-class HFCC:
-    """Holt die passende Saison einmal und hält sie im Speicher."""
-
-    def __init__(self, cache_dir: os.PathLike | str, base_url: str = DEFAULT_BASE,
-                 refresh_days: float = 7.0, log: Callable[[str], None] = lambda t: None,
-                 fetch: Optional[Callable[[str], bytes]] = None):
-        self.cache_dir = Path(cache_dir)
-        self.base_url = base_url.rstrip("/")
-        self.refresh_days = refresh_days
-        self.log = log
-        self.fetch = fetch or self._http_get
-        self.schedule: Optional[Schedule] = None
-        self.error: Optional[str] = None
-        self._lock = threading.Lock()
-        self._busy = False
-
-    @staticmethod
-    def _http_get(url: str) -> bytes:
-        req = urllib.request.Request(url, headers={"User-Agent": "Satellit"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return resp.read()
-
-    def _file(self, season: str) -> Path:
-        return self.cache_dir / f"{season}allx2.zip"
+    def _stale(self, season: str) -> bool:
+        path = self._file(season)
+        return not path.exists() or \
+            time.time() - path.stat().st_mtime > self.refresh_interval(season) * 86400
 
     def ensure(self, background: bool = True) -> None:
         """Saison laden (aus dem Zwischenspeicher, sonst/zu alt aus dem Netz)."""
@@ -420,10 +304,7 @@ class HFCC:
                 return
             season = season_for(datetime.now(timezone.utc).date())
             fresh = self.schedule is not None and self.schedule.season == season
-            path = self._file(season)
-            stale = not path.exists() or \
-                time.time() - path.stat().st_mtime > self.refresh_days * 86400
-            if fresh and not stale:
+            if fresh and not self._stale(season):
                 return
             self._busy = True
         if background:
@@ -444,8 +325,7 @@ class HFCC:
                         pass
                 elif p.exists():
                     break
-            path = self._file(season)
-            if path.exists() and time.time() - path.stat().st_mtime <= self.refresh_days * 86400:
+            if not self._stale(season):
                 return
             for s in (season, previous_season(season)):   # neue Saison evtl. noch nicht da
                 if self.schedule is not None and self.schedule.season == season and s != season:

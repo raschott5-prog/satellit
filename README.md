@@ -263,9 +263,12 @@ Wiederholungsschleifen – die kürzt bzw. verwirft der Filter.
 Die High Frequency Co-ordination Conference veröffentlicht pro Saison die
 angemeldeten Sendungen aller großen Kurzwellensender
 (`http://www.hfcc.org/data/b26/b26allx2.zip`, ~160 KB). Satellit lädt die
-passende Saison beim ersten Kiwi-/UberSDR-Sender, speichert sie im
-Konfigordner (`hfcc/`) und erneuert sie wöchentlich. Ist die neue Saison noch
-nicht veröffentlicht, gilt die alte weiter.
+passende Saison beim ersten Kiwi-/UberSDR-/WebSDR-Sender, speichert sie im
+Konfigordner (`hfcc/`) und erneuert sie wöchentlich – in den ersten vier
+Wochen einer Saison (ab dem letzten Sonntag im März bzw. Oktober) **täglich**,
+weil die HFCC zum Saisonwechsel oft mehrmals nachbessert
+(`hfcc.new_season_days`, `hfcc.new_season_refresh_days`). Ist die neue Saison
+noch nicht veröffentlicht, gilt die alte weiter.
 
 - **Anzeige:** Das LCD zeigt unter dem Sendernamen z. B.
   „▸ CRI · Kroatisch · Urumqi 500 kW“ (mehr per Tooltip), die Senderliste

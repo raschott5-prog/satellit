@@ -7,6 +7,7 @@ zusammen und läuft, bis der Server beendet wird.
 from __future__ import annotations
 
 import argparse
+import signal
 import sys
 
 from . import __version__
@@ -61,6 +62,9 @@ def main(argv=None) -> int:
 
     engine = Engine(config, output=output)
     engine.start()
+    # kill/systemd (SIGTERM) wie Strg+C behandeln, damit engine.stop() aufräumt
+    # (sonst bleiben z. B. WebSDR-Chromium und virtuelle Soundkarte zurück)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
         serve(engine, config, listen=listen, port=port)
     finally:

@@ -106,3 +106,28 @@ def test_engine_hint_for_shortwave_station(tmp_path):
     expected = eng.funk.hfcc.on_air(7225)
     assert [e["short"] for e in eng.funk.on_air("k")] == [e["short"] for e in expected]
     assert eng.funk._language_hint() == hfcc.candidates(expected)
+
+
+def test_season_start():
+    assert hfcc.season_start("b26") == date(2026, 10, 25)      # letzter Sonntag im Oktober
+    assert hfcc.season_start("a27") == date(2027, 3, 28)       # letzter Sonntag im März
+
+
+def test_daily_refresh_in_first_weeks_of_season(tmp_path):
+    h = hfcc.HFCC(tmp_path, refresh_days=7, new_season_days=28, new_season_refresh_days=1)
+    assert h.refresh_interval("b26", date(2026, 10, 25)) == 1   # Saisonstart
+    assert h.refresh_interval("b26", date(2026, 11, 21)) == 1   # Tag 27
+    assert h.refresh_interval("b26", date(2026, 11, 22)) == 7   # ab Tag 28 wöchentlich
+    assert h.refresh_interval("b26", date(2027, 1, 10)) == 7
+
+
+def test_four_day_old_file_is_stale_at_season_start(tmp_path, monkeypatch):
+    h = hfcc.HFCC(tmp_path, refresh_days=7)
+    p = h._file("b26")
+    p.write_bytes(b"x")
+    alt = time.time() - 4 * 86400
+    os.utime(p, (alt, alt))
+    monkeypatch.setattr(h, "refresh_interval", lambda s, today=None: 1.0)
+    assert h._stale("b26")                      # Startphase: täglich -> veraltet
+    monkeypatch.setattr(h, "refresh_interval", lambda s, today=None: 7.0)
+    assert not h._stale("b26")                  # sonst wöchentlich -> noch gut

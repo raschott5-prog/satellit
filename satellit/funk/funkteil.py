@@ -53,6 +53,9 @@ class Funkteil:
             config.path.parent / "hfcc",
             base_url=config.get("hfcc", "base_url", default=hfcc_mod.DEFAULT_BASE),
             refresh_days=float(config.get("hfcc", "refresh_days", default=7)),
+            new_season_days=float(config.get("hfcc", "new_season_days", default=28)),
+            new_season_refresh_days=float(config.get("hfcc", "new_season_refresh_days",
+                                                     default=1)),
             log=engine._log)
         self._on_air_cache: tuple[float, dict] = (0.0, {})
         self.translator = Translator(config.data.get("translate", {}),
@@ -129,7 +132,12 @@ class Funkteil:
         return self.hfcc.on_air(float(spec["freq_khz"]))
 
     def _language_hint(self) -> Optional[list]:
-        return hfcc_mod.candidates(self.on_air(self.engine._current_station()))
+        # Eigene Angabe am Sender ("language": "nl" oder ["nl", "de"]) schlägt den HFCC-Plan
+        sid = self.engine._current_station()
+        own = (self.config.station(sid) or {}).get("language") if sid else None
+        if own:
+            return [own] if isinstance(own, str) else list(own)
+        return hfcc_mod.candidates(self.on_air(sid))
 
     def _on_air_all(self) -> dict:
         """Für die Anzeige: alle Kurzwellensender, höchstens alle 30 s neu."""

@@ -130,7 +130,10 @@ def default_config() -> dict[str, Any]:
         },
         # Sendeplan der HFCC: zeigt, was auf einer Kurzwellenfrequenz läuft,
         # und gibt dem Übersetzer die Sprache vor (~160 KB pro Woche)
-        "hfcc": {"enabled": True, "base_url": "http://www.hfcc.org/data", "refresh_days": 7},
+        # in den ersten new_season_days Tagen einer Saison täglich nachladen,
+        # weil die HFCC zum Saisonwechsel oft mehrmals nachbessert
+        "hfcc": {"enabled": True, "base_url": "http://www.hfcc.org/data", "refresh_days": 7,
+                 "new_season_days": 28, "new_season_refresh_days": 1},
         "web": {"listen": "127.0.0.1", "port": 8080},
     }
 
