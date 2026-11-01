@@ -27,6 +27,12 @@ Nur mit eingeschaltetem Funk-Teil (sonst 409):
   POST /api/translate       {"enabled": true|false}, {"clear": true} und/oder
                             {"model": "small"|"medium"|…}
   GET  /api/devices         Audiogeräte
+Senderchronik (Funk-Teil egal):
+  GET  /api/chronik         {"counts": {sender: anzahl}}
+  GET  /api/chronik?station=id            Einträge eines Senders
+  POST /api/chronik         {"station", "text", "author", "source", "replaces"}
+  GET  /api/chronik/export[?station=id]   Chronik als Datei (JSON)
+  POST /api/chronik/import  Inhalt einer exportierten Chronik
 
 Alle Dateizugriffe bleiben im Static- bzw. Medienordner (kein ``../``).
 """
@@ -40,9 +46,10 @@ import threading
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import parse_qs, unquote
 
 from . import __version__
+from .chronik import Chronik
 from .media import MAX_UPLOAD, list_media, resolve, safe_name
 from .output import list_devices
 
@@ -115,6 +122,27 @@ class _Handler(BaseHTTPRequestHandler):
     def _path(self) -> str:
         return unquote(self.path.split("?", 1)[0])
 
+    def _query(self, key: str) -> str | None:
+        q = parse_qs(self.path.split("?", 1)[1]) if "?" in self.path else {}
+        return q.get(key, [None])[0]
+
+    _chroniken: dict = {}
+    _chronik_lock = threading.Lock()
+
+    def _chronik(self) -> Chronik:
+        """Eine Chronik pro Konfigurationsordner (chronik.json neben config.json)."""
+        path = Path(self.config.path).parent / "chronik.json"
+        with _Handler._chronik_lock:
+            if path not in _Handler._chroniken:
+                _Handler._chroniken[path] = Chronik(path)
+            return _Handler._chroniken[path]
+
+    def _station_name(self, sid: str) -> str:
+        for st in self.config.data.get("stations", []):
+            if st.get("id") == sid:
+                return st.get("name", "")
+        return ""
+
     # --- GET --------------------------------------------------------------
     def do_GET(self):
         p = self._path()
@@ -141,6 +169,22 @@ class _Handler(BaseHTTPRequestHandler):
             self._json({"media": list_media(self.config.media_dir)})
         elif p == "/api/devices":
             self._json({"devices": list_devices()})
+        elif p == "/api/chronik":
+            sid = self._query("station")
+            if sid:
+                self._json({"station": sid, "entries": self._chronik().entries(sid)})
+            else:
+                self._json({"counts": self._chronik().counts()})
+        elif p == "/api/chronik/export":
+            sid = self._query("station")
+            body = json.dumps(self._chronik().export(sid), ensure_ascii=False, indent=1).encode("utf-8")
+            name = "chronik-" + "".join(ch for ch in (sid or "alle") if ch.isalnum() or ch in "-_") + ".json"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
         else:
             self._json({"error": "unknown"}, 404)
 
@@ -151,6 +195,22 @@ class _Handler(BaseHTTPRequestHandler):
         eng = self.engine
         if p == "/api/tune":
             self._json({"ok": eng.tune(str(b.get("station", "")))})
+        elif p == "/api/chronik":
+            sid = str(b.get("station", ""))
+            try:
+                e = self._chronik().add(station=sid, text=b.get("text", ""),
+                                        author=b.get("author", ""), source=b.get("source", ""),
+                                        replaces=b.get("replaces", ""),
+                                        station_name=self._station_name(sid))
+            except ValueError as ex:
+                self._json({"ok": False, "error": str(ex)}, 400)
+                return
+            self._json({"ok": True, "entry": e})
+        elif p == "/api/chronik/import":
+            try:
+                self._json({"ok": True, **self._chronik().import_(b)})
+            except ValueError as ex:
+                self._json({"ok": False, "error": str(ex)}, 400)
         elif p == "/api/back":
             eng.back_to_program()
             self._json({"ok": True})

@@ -190,6 +190,16 @@ Web: kleiner HTTP-Server (nur Standardbibliothek) + eine HTML-Datei
   Vorlauf, statt jeden einzelnen Schub sofort abzuspielen: einmal kurz still
   statt ständigem Stottern. Der Abriss wird dabei weich ausgeblendet (kein
   Knacken) und der Sender danach über 2 s wieder eingeblendet. Der Status zeigt `buffer_s` und `rebuffers`.
+- **Senderchronik:** Register „Chronik“ in der Radio-Ansicht. Zu jedem Sender
+  lassen sich Geschichte und Geschichten eintragen (Text, Name, Quelle). Einträge
+  werden nie geändert; wer etwas besser weiß, schreibt eine *Berichtigung*, der
+  alte Eintrag bleibt durchgestrichen sichtbar. Sender mit Chronik tragen in der
+  Senderliste ein „ⓘ n“ (Klick öffnet die Chronik). Gespeichert wird in
+  `chronik.json` neben der `config.json`. **Exportieren** gibt die Chronik eines
+  Senders als Datei aus, **Importieren** übernimmt eine fremde Datei: Doppeltes
+  wird erkannt, nachträglich veränderte Einträge werden abgelehnt (jede ID ist ein
+  Prüfwert über den Inhalt). API: `GET/POST /api/chronik`,
+  `GET /api/chronik/export`, `POST /api/chronik/import`.
 - Die Wache schaltet nach 2 Treffern in Folge um und nach 10 ruhigen Abfragen
   zurück (einstellbar). „Zurück zum Programm“ schaltet den Kanal 30 Minuten
   stumm. Hört man den Wache-Kanal ohnehin gerade, wird kein zweiter Kiwi-Slot

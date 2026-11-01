@@ -172,6 +172,21 @@ ul.list li:first-child{border-top:0}
 .st .nm{font-weight:600;font-size:14px}
 .st .sub{font-size:11px;color:var(--muted)}
 .st .sub.air{color:var(--lcd-ink);opacity:.75}
+.st .chr{font-size:11px;color:var(--accent);margin-left:6px;cursor:pointer;border-bottom:1px dotted var(--accent)}
+
+/* Chronik */
+ul.chr-list li{display:block}
+.chr-list .meta{font-size:11px;color:var(--muted);margin-bottom:3px}
+.chr-list .txt{white-space:pre-wrap;line-height:1.45}
+.chr-list .quelle{font-size:12px;color:var(--muted);margin-top:3px;word-break:break-all}
+.chr-list .quelle a{color:var(--accent)}
+.chr-list li.alt{opacity:.5} .chr-list li.alt .txt{text-decoration:line-through}
+.chr-list .act{font-size:11px;margin-top:4px}
+.chr-list .act button{background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font:inherit}
+.chr-form{display:grid;gap:8px;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.chr-form textarea,.chr-form input{background:#121316;color:var(--text);border:1px solid #3a3e46;border-radius:6px;
+  padding:7px 9px;font:14px system-ui;width:100%;box-sizing:border-box}
+.chr-form textarea{min-height:90px;resize:vertical}
 .st .kind{margin-left:auto;font:10px/1 ui-monospace,monospace;color:var(--muted)}
 
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;
@@ -239,6 +254,7 @@ footer a{color:var(--accent)}
     <div class="tabs" role="tablist">
       <button class="on" data-tab="translate">Übersetzer<span class="badge" id="tr-badge"></span></button>
       <button data-tab="stations">Sender</button>
+      <button data-tab="chronik">Chronik</button>
       <button data-tab="schedule">Hörfahrplan</button>
       <button data-tab="watch">Wache</button>
       <button data-tab="same">SAME</button>
@@ -260,6 +276,26 @@ footer a{color:var(--accent)}
       <p class="hint">Grüner Punkt = Empfang läuft, gelb = verbindet, rot = gestört (Grund steht darunter).
         Fällt ein Sender aus, springt Satellit auf seinen Ersatz und später zurück.</p>
       <div class="stations" id="stations"></div>
+    </div>
+
+    <div class="tab" id="tab-chronik">
+      <p class="hint">Geschichte und Geschichten zum Sender. Jeder Eintrag bleibt stehen; wer etwas besser weiß,
+        schreibt eine Berichtigung dazu. Bitte Quellen angeben, wo es geht.</p>
+      <div class="bar">
+        <label class="small">Sender <select id="chr-station"></select></label>
+        <a class="btn" id="chr-export" download>Exportieren</a>
+        <label class="btn" title="Chronik-Datei von jemand anderem übernehmen">Importieren
+          <input type="file" id="chr-import" accept=".json,application/json" hidden></label>
+      </div>
+      <ul class="list chr-list" id="chr-list"></ul>
+      <form class="chr-form" id="chr-form">
+        <div class="small" id="chr-replaces" hidden></div>
+        <textarea id="chr-text" maxlength="5000" placeholder="Was weißt du über diesen Sender?"></textarea>
+        <input id="chr-source" maxlength="500" placeholder="Quelle (Link, Buch, „selbst gehört 1985“ …)">
+        <input id="chr-author" maxlength="80" placeholder="Dein Name (sonst „anonym“)">
+        <div class="bar"><button class="btn primary" type="submit">Eintragen</button>
+          <button class="btn" type="button" id="chr-cancel" hidden>Berichtigung abbrechen</button></div>
+      </form>
     </div>
 
     <div class="tab" id="tab-schedule">
@@ -528,14 +564,48 @@ function renderStations(s, st){
     el.className="st "+cls+(st&&st.id===c.id?" on":"");
     const f=khz(c);
     const fb=c.fallback?` · Ersatz: ${esc(shortName({name:stName(c.fallback)}))}`:"";
-    el.innerHTML=`<span class="dot"></span><span><span class="nm">${esc(c.name)}</span><br>
+    el.innerHTML=`<span class="dot"></span><span><span class="nm">${esc(c.name)}</span>${chr.counts[c.id]?`<span class="chr" data-chr="${esc(c.id)}" title="Chronik öffnen">ⓘ ${chr.counts[c.id]}</span>`:""}<br>
       <span class="sub">${f!=null?(f>=87500?(f/1000).toFixed(1)+" MHz":f+" kHz"):""}${src?" · "+esc(src.error||stat):""}${fb}</span>${
         (s.on_air||{})[c.id]?`<br><span class="sub air">jetzt: ${esc(s.on_air[c.id].map(a=>a.short+" "+a.lang_de).join(", "))}</span>`:""}</span>
       <span class="kind">${esc({stream:"UKW",kiwi:"KIWI",ubersdr:"UBER",folder:"ORDNER",file:"DATEI"}[c.kind]||String(c.kind||"").toUpperCase())}</span>`;
-    el.onclick=()=>tune(c.id);
+    el.onclick=ev=>{ const b=ev.target.closest("[data-chr]"); if(b){ ev.stopPropagation(); openChronik(b.dataset.chr); } else tune(c.id); };
     box.appendChild(el);
   }
 }
+/* ------------------------------------------------------------ Chronik */
+const chr={counts:{}, station:null, picked:false, replaces:null, sig:""};
+function fmtDate(iso){ const d=new Date(iso); return isNaN(d)?iso:d.toLocaleDateString("de-AT",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+d.toLocaleTimeString("de-AT",{hour:"2-digit",minute:"2-digit"}); }
+function linkOrText(q){ return /^https?:\/\/\S+$/.test(q)?`<a href="${esc(q)}" target="_blank" rel="noopener noreferrer">${esc(q)}</a>`:esc(q); }
+async function loadCounts(){ try{ chr.counts=(await api("/api/chronik")).counts||{}; }catch(e){} }
+function chrStationSelect(){
+  const sel=$("#chr-station"), sig=JSON.stringify([cfg.stations.map(x=>x.id+x.name),chr.counts,chr.station]);
+  if(sig===chr.sig) return; chr.sig=sig;
+  sel.innerHTML=cfg.stations.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}${chr.counts[x.id]?` (${chr.counts[x.id]})`:""}</option>`).join("");
+  if(chr.station) sel.value=chr.station;
+}
+async function showChronik(){
+  if(!chr.station) return;
+  chrStationSelect();
+  $("#chr-export").href="/api/chronik/export?station="+encodeURIComponent(chr.station);
+  $("#chr-export").setAttribute("download","chronik-"+chr.station+".json");
+  let es=[]; try{ es=(await api("/api/chronik?station="+encodeURIComponent(chr.station))).entries||[]; }catch(e){}
+  $("#chr-list").innerHTML=es.length?es.slice().reverse().map(e=>`<li class="${e.replaced_by?"alt":""}">
+      <div class="meta">${esc(fmtDate(e.created))} · ${esc(e.author)}${e.replaces?" · Berichtigung":""}${e.replaced_by?" · berichtigt":""}</div>
+      <div class="txt">${esc(e.text)}</div>${e.source?`<div class="quelle">Quelle: ${linkOrText(e.source)}</div>`:""}
+      ${e.replaced_by?"":`<div class="act"><button type="button" data-fix="${esc(e.id)}">berichtigen</button></div>`}</li>`).join("")
+    :'<li class="small">Noch nichts eingetragen. Fang an!</li>';
+  $("#chr-list").querySelectorAll("[data-fix]").forEach(b=>b.onclick=()=>{
+    const e=es.find(x=>x.id===b.dataset.fix); chr.replaces=e.id;
+    $("#chr-text").value=e.text; $("#chr-source").value=e.source||"";
+    $("#chr-replaces").textContent="Berichtigung zum Eintrag vom "+fmtDate(e.created)+" ("+e.author+")";
+    $("#chr-replaces").hidden=false; $("#chr-cancel").hidden=false; $("#chr-text").focus();
+  });
+}
+function resetChrForm(){ chr.replaces=null; $("#chr-text").value=""; $("#chr-source").value="";
+  $("#chr-replaces").hidden=true; $("#chr-cancel").hidden=true; }
+function openChronik(id){ chr.station=id; chr.picked=true; resetChrForm();
+  document.querySelector('.tabs button[data-tab="chronik"]').click(); showChronik(); }
+
 function onAirText(a){ return `${a.short} · ${a.lang_de} · ${a.site} ${a.power} kW`; }
 function renderSchedule(sc){
   const ul=$("#sched");
@@ -574,6 +644,8 @@ async function loadConfig(){
     const c=await api("/api/config");
     const sig=JSON.stringify([c.stations,c.fallback]);
     if(sig!==loadConfig.sig){ loadConfig.sig=sig; cfg=c; cfg.stations=c.stations||[]; drawScale(); drawPresets(); }
+    if(!chr.station && $("#tab-chronik").classList.contains("on")){   // Seite mit offener Chronik geladen
+      const st=activeStation(); chr.station=st?st.id:(cfg.stations[0]||{}).id; showChronik(); }
   }catch(e){}
 }
 setInterval(loadConfig,10000);
@@ -592,6 +664,28 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   try{ localStorage.setItem("satellit-tab",b.dataset.tab); }catch(e){}
 });
 try{ const t=localStorage.getItem("satellit-tab"); if(t) document.querySelector(`.tabs button[data-tab="${t}"]`)?.click(); }catch(e){}
+try{ $("#chr-author").value=localStorage.getItem("satellit-autor")||""; }catch(e){}
+$("#chr-station").onchange=ev=>{ chr.station=ev.target.value; chr.picked=true; resetChrForm(); showChronik(); };
+$("#chr-cancel").onclick=resetChrForm;
+$("#chr-form").onsubmit=async ev=>{
+  ev.preventDefault();
+  const author=$("#chr-author").value.trim(); try{ localStorage.setItem("satellit-autor",author); }catch(e){}
+  try{
+    await api("/api/chronik",{station:chr.station,text:$("#chr-text").value,source:$("#chr-source").value,
+                              author,replaces:chr.replaces||""});
+    resetChrForm(); await loadCounts(); showChronik(); toast("In die Chronik eingetragen");
+  }catch(e){ toast("Nicht eingetragen: "+e.message); }
+};
+$("#chr-import").onchange=async ev=>{
+  const f=ev.target.files[0]; ev.target.value=""; if(!f) return;
+  try{ const r=await api("/api/chronik/import",JSON.parse(await f.text()));
+    toast(`Übernommen: ${r.added} neu, ${r.known} schon da${r.invalid?`, ${r.invalid} ungültig`:""}`);
+    await loadCounts(); showChronik();
+  }catch(e){ toast("Import fehlgeschlagen: "+e.message); }
+};
+document.querySelector('.tabs button[data-tab="chronik"]').addEventListener("click",()=>{
+  if(!chr.picked){ const a=activeStation(); chr.station=a?a.id:(cfg.stations[0]||{}).id; } showChronik(); });
+loadCounts(); setInterval(loadCounts,30000);
 $("#tr-toggle").onclick=()=>api("/api/translate",{enabled:!state?.translate?.enabled}).then(poll);
 $("#tr-model").onchange=ev=>{
   const sel=ev.target, m=(state?.translate?.models||[]).find(x=>x.name===sel.value);
