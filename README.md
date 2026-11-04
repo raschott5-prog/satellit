@@ -382,6 +382,10 @@ Mixer-Abgriff) mit einem Ersatz-Modell statt Whisper.
 - Titelanzeige (ICY-Metadaten) für Streams
 - UberSDR PCM-v4-Pfad (derzeit nur Opus); FIPS-Tabelle für lesbare Gebietswahl
 - Lokaler VHF-Empfang (RTL-SDR auf 162 MHz) für NWR direkt
+- Weitersenden: das fertige Programm als eigener Stream (Icecast/SHOUTcast
+  oder direkt per HTTP) mit Umcodieren (Opus/MP3, Lautheits-Angleichung),
+  für mehrere Räume oder schwache Leitungen. Siehe
+  [`docs/idee-weitersenden.md`](docs/idee-weitersenden.md)
 
 ## Lizenz
 
