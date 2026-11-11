@@ -338,8 +338,12 @@ class Engine:
             if not self.queue or self.mixer.muted or alarm:
                 return
             item = self.queue.popleft()
-            if time.time() - item["due"] > max_delay:
+            # Von Hand Eingereihtes darf warten; nur Geplantes verfällt.
+            if item.get("source") != "Hand" and time.time() - item["due"] > max_delay:
                 self._log(f"verworfen (zu spät): {item['label']}")
+                # Der Vorgänger hat die Musik unten gelassen: ohne Anschluss wieder hochfahren
+                if not self.queue:
+                    self.mixer.set_duck(1.0, release_s)
                 return
             self.oneshot = {"item": item, "idx": 0, "src": None, "phase": "open"}
             os_ = self.oneshot
