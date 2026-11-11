@@ -53,6 +53,7 @@ from .sources.silence import SilenceSource
 
 L_SLEEP, L_BASE = 0, 1
 RETRY_SECONDS = 60.0
+RECONNECT_SECONDS = 10.0   # Neuversuch für einen Sender, der schon lief und abgerissen ist
 #: Nicht mehr gehörte Quellen nach so vielen Sekunden schließen. Jede offene
 #: Kiwi-Verbindung belegt einen der wenigen Plätze eines fremden Empfängers.
 IDLE_CLOSE_SECONDS = 15.0
@@ -226,16 +227,33 @@ class Engine:
             src = self._sources.get(station_id)
             if src is not None:
                 dead = src.failed or (not src.ready and src.waited_too_long())
-                if not dead or time.time() - src.started_at < RETRY_SECONDS:
+                # Sender, der schon lief und abgerissen ist (Portal, WLAN-Wechsel):
+                # auch die Folgeversuche zügig; nur nie gelaufene Sender warten die volle Frist
+                reconnect = getattr(src, "was_ready", False) or getattr(src, "reconnect", False)
+                retry = RECONNECT_SECONDS if reconnect else RETRY_SECONDS
+                if not dead or time.time() - src.started_at < retry:
                     return src
                 src.stop()   # neuer Versuch mit frischer Quelle
+            else:
+                reconnect = False
             spec = self.config.station(station_id)
             if spec is None:
                 return None
             src = make_source(spec, uuid=self.uuid, media_dir=self.config.media_dir,
-                              funk=self.funk is not None).start()
+                              funk=self.funk is not None)
+            src.reconnect = reconnect          # Ersatz für einen abgerissenen Sender
+            src.start()
             self._sources[station_id] = src
             return src
+
+    def _drop_dead_source(self, station_id: str) -> None:
+        """Toten Sender sofort verwerfen, damit der nächste Takt frisch verbindet."""
+        with self._lock:
+            src = self._sources.get(station_id)
+            if src is None or not self._source_dead(src):
+                return
+            del self._sources[station_id]
+        threading.Thread(target=src.stop, name="drop-dead", daemon=True).start()
 
     @staticmethod
     def _source_dead(src) -> bool:
@@ -252,6 +270,8 @@ class Engine:
     def tune(self, station_id: str) -> bool:
         if self.config.station(station_id) is None:
             return False
+        # denselben Sender noch einmal wählen = neu verbinden, falls er tot ist
+        self._drop_dead_source(station_id)
         self.base = {"mode": "station", "id": station_id,
                      "fade": self.config.get("audio", "crossfade_seconds", default=4.0)}
         self.manual_active = True

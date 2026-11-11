@@ -147,6 +147,57 @@ def test_mixer_follows_reconnected_source(tmp_path):
         eng.stop()
 
 
+def _warte(bedingung, sekunden=5.0):
+    ende = time.time() + sekunden
+    while not bedingung() and time.time() < ende:
+        time.sleep(0.05)
+    return bedingung()
+
+
+def test_reconnect_after_drop_retries_quickly(tmp_path):
+    # Portal-Abmeldung: der Sender lief, reißt ab, und auch der erste
+    # Neuversuch scheitert noch – der zweite darf nicht 60 s auf sich warten lassen
+    import satellit.engine as engine_mod
+    eng = _engine(tmp_path)
+    eng.start()
+    try:
+        eng.tune("a")
+        assert _warte(lambda: eng.committed_label == "Rauschen", 3)
+        old = eng._sources["a"]
+        old.status, old.error = "error", "Verbindung verloren"     # lief schon (was_ready)
+        old.started_at -= 3600                                       # lief seit einer Stunde
+        assert _warte(lambda: eng._sources.get("a") is not old)
+        first = eng._sources["a"]
+        assert first.reconnect, "Ersatzquelle muss als Neuverbindung gelten"
+        first.status, first.error = "error", "Netz noch weg"        # Neuversuch scheitert
+        first.started_at -= engine_mod.RECONNECT_SECONDS + 1        # kurze Frist abgelaufen
+        assert engine_mod.RECONNECT_SECONDS < engine_mod.RETRY_SECONDS
+        assert _warte(lambda: eng._sources.get("a") is not first), \
+            "zweiter Neuversuch wartet die lange Frist ab"
+        assert _warte(lambda: eng._committed_source is eng._sources.get("a")
+                      and eng._committed_source.status == "playing")
+    finally:
+        eng.stop()
+
+
+def test_retune_same_dead_station_reconnects_now(tmp_path):
+    eng = _engine(tmp_path)
+    eng.start()
+    try:
+        eng.tune("a")
+        assert _warte(lambda: eng.committed_label == "Rauschen", 3)
+        old = eng._sources["a"]
+        old.status, old.error = "error", "Verbindung verloren"
+        old.started_at = time.time()          # Frist läuft noch: ohne Eingriff kein Neuversuch
+        old.was_ready = False
+        assert eng.tune("a")                  # Nutzer wählt denselben Sender noch einmal
+        assert _warte(lambda: eng._sources.get("a") not in (None, old), 2), \
+            "erneutes Einstellen hat nicht neu verbunden"
+        assert _warte(lambda: eng._committed_source is eng._sources.get("a"))
+    finally:
+        eng.stop()
+
+
 def test_idle_sources_are_closed(tmp_path, monkeypatch):
     import satellit.engine as engine_mod
     monkeypatch.setattr(engine_mod, "IDLE_CLOSE_SECONDS", 0.5)
