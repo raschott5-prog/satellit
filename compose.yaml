@@ -1,0 +1,36 @@
+# Satellit per Docker Compose oder podman-compose – Anleitung: docs/docker.md
+#
+#   docker compose up -d --build
+#   podman-compose up -d --build      (dafür unten userns_mode einschalten)
+#   Oberfläche: http://localhost:8080
+#
+# Voraussetzung: Linux mit PulseAudio oder PipeWire (pipewire-pulse), Benutzer-UID 1000.
+# Andere UID: user und den Pfad zum Socket anpassen (/run/user/<UID>/pulse/native).
+
+# podman-compose: ohne Pod, sonst geht userns_mode nicht (Docker ignoriert x-Einträge)
+x-podman:
+  in_pod: false
+
+services:
+  satellit:
+    build:
+      context: .
+      args:
+        FUNK: "0"          # "1" = KiwiSDR/UberSDR
+        UEBERSETZER: "0"   # "1" = Whisper-Übersetzer (großes Image)
+    image: satellit:0.4.7
+    container_name: satellit
+    restart: unless-stopped
+    user: "1000:1000"
+    # Nur Podman ohne Root: UID 1000 im Container = eigener Benutzer, sonst ist
+    # der Pulse-Anschluss gesperrt. Docker kennt keep-id nicht – dort auskommentiert lassen.
+    # userns_mode: keep-id
+    environment:
+      TZ: Europe/Berlin
+    ports:
+      # Nur auf diesem Rechner erreichbar. Fürs Heimnetz: "8080:8080"
+      # (die Oberfläche hat keine Anmeldung – nur in vertrauten Netzen öffnen).
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./satellit-daten:/config
+      - /run/user/1000/pulse/native:/run/pulse/native

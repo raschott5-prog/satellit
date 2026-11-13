@@ -114,6 +114,10 @@ zum Doppelklicken (Vorlage in [`packaging/mac-beta/`](packaging/mac-beta/)).
 ffmpeg muss nicht installiert sein: Fehlt es im PATH, nimmt Satellit unter
 macOS und Windows das aus dem pip-Paket `imageio-ffmpeg`.
 
+**Container** (Docker/Podman, Linux und Raspberry Pi): `docker compose up -d --build`,
+Ton über PulseAudio/PipeWire des Rechners, Daten in `satellit-daten/`. Siehe
+[`docs/docker.md`](docs/docker.md).
+
 Optionen:
 
 | Option | Zweck |

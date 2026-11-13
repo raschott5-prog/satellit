@@ -9,3 +9,4 @@ ffmpeg/
 *.wav
 .venv/
 .pytest_cache/
+satellit-daten/

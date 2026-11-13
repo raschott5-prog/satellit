@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+build
+dist
+ffmpeg
+packaging
+claude
+tests
+satellit-daten
+*.wav
