@@ -19,11 +19,16 @@ Weltempfänger – aber seine Sender aus dem Netz holt:
   exotische Kurzwellenstationen und Amateurfunk: lieber Bruchstücke mit
   Fragezeichen als gar nichts.
 - **Weiche Übergänge** überall: Equal-Power-Überblendung mit etwas Sender-
-  rauschen, Pegelausgleich zwischen AM und UKW-Stream, Weck-Einblendung über
-  Minuten. Ein Weck-Eintrag (`"wake": true`) beginnt immer bei null, auch wenn
+  rauschen, Weck-Einblendung über Minuten. Ein Weck-Eintrag (`"wake": true`) beginnt immer bei null, auch wenn
   vorher etwas lief, und blendet über seine eigene `fade` ein (mindestens
   `audio.wake_seconds`), z. B. `{"time": "18:00", "station": "wdr4", "fade": 600,
   "wake": true}` = 10 Minuten Fade-in.
+- **Gleich laut auf allen Sendern:** Satellit misst die Lautheit jedes Senders
+  nach EBU R128 und gleicht sie langsam auf einen Zielwert an
+  (`audio.loudness_target`, Standard −16 LUFS) – vom Kurzwellen-Kiwi bis zum
+  hochgezogenen Privatsender, ohne zu pumpen. Gemessene Werte merkt er sich je
+  Sender (`lautheit.json`), beim Umschalten stimmt der Pegel sofort. Abschalten:
+  `audio.auto_level: false`, für einzelne Sender `"loudness": false`.
 
 Bedienung im Browser unter `http://localhost:8080` – auf Windows, Linux und
 dem Raspberry Pi gleich.
@@ -140,7 +145,7 @@ Stream-URLs und Empfänger trägt man selbst ein.
 ```
 Quellen (Stream/ffmpeg, KiwiSDR/Websocket, UberSDR/Opus)  ->  PCM 48 kHz Stereo
         |
-Mixer: Deck A / Deck B, Überblendung, Pegelausgleich, Master-Rampe, Begrenzer
+Mixer: Deck A / Deck B, Überblendung, Lautheitsangleich, Master-Rampe, Begrenzer
         |
 Ausgabe: PortAudio (oder stumm / WAV)
 
@@ -154,7 +159,8 @@ Web: kleiner HTTP-Server (nur Standardbibliothek) + eine HTML-Datei
 | Datei | Inhalt |
 |---|---|
 | `satellit/audio.py` | Format-Konstanten, thread-sicherer Ringpuffer |
-| `satellit/mixer.py` | Zwei Decks, Crossfade, Weck-Rampe, Pegelausgleich, Begrenzer |
+| `satellit/mixer.py` | Zwei Decks, Crossfade, Weck-Rampe, Begrenzer |
+| `satellit/lautheit.py` | Lautheitsmessung (EBU R128) und -angleich je Sender |
 | `satellit/config.py` | Konfiguration laden/speichern (plattformübergreifend) |
 | `satellit/sources/stream.py` | Internet-Stream über ffmpeg, .pls/.m3u |
 | `satellit/sources/file.py` | Lokale Dateien (WAV nativ, sonst ffmpeg), Musikordner |

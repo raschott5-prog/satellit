@@ -16,7 +16,8 @@ from typing import Optional
 
 import numpy as np
 
-from .audio import BLOCK, CHANNELS, DTYPE, SAMPLE_RATE, as_stereo, rms, silence
+from .audio import BLOCK, CHANNELS, DTYPE, SAMPLE_RATE, as_stereo, silence
+from .lautheit import ZIEL_LUFS, Lautheit
 
 
 def equal_power(x: float) -> tuple[float, float]:
@@ -49,9 +50,22 @@ class Deck:
     source: object | None = None
     gain: float = 1.0           # fester Pegelausgleich (AM leiser als UKW-Stream)
     label: str = ""             # Anzeigename des aktuellen Senders
+    key: str | None = None      # Sender-Schlüssel (für die gemerkte Lautheit)
+    #: Lautheitsangleich (EBU R128) an/aus; die Einspielungs-Ebene bleibt aus
+    normalize: bool = False
+    lautheit: Lautheit = field(default_factory=Lautheit, repr=False)
 
-    # Laufende RMS-Schätzung für optionale Auto-Normalisierung
-    _rms: float = field(default=0.0, repr=False)
+    def assign(self, source, key: str | None = None, label: str = "",
+               gemerkt: float | None = None, normalize: bool | None = None) -> None:
+        """Neue Quelle aufs Deck; Lautheitsmessung beginnt neu (oder beim
+        gemerkten Wert dieses Senders). ``normalize`` None = wie bisher."""
+        self.source = source
+        if normalize is not None:
+            self.normalize = normalize
+        self.key = key
+        self.label = label
+        self.gain = 1.0
+        self.lautheit.reset(gemerkt)
 
     def read(self, frames: int) -> np.ndarray:
         src = self.source
@@ -65,9 +79,12 @@ class Deck:
             pad = silence(frames)
             pad[: len(block)] = block[:frames]
             block = pad
-        # gleitender RMS (langsam), für Auto-Pegel
-        cur = rms(block)
-        self._rms = 0.98 * self._rms + 0.02 * cur
+        if self.normalize:
+            self.lautheit.messen(block)
+            g0, g1 = self.lautheit.schritt(frames)
+            if g0 == g1:
+                return block * (self.gain * g1)
+            return block * (_ramp(g0, g1, frames)[:, None] * self.gain)
         return block * self.gain
 
     @property
@@ -76,8 +93,11 @@ class Deck:
         return bool(src is not None and getattr(src, "ready", True))
 
     @property
-    def level(self) -> float:
-        return self._rms
+    def loudness(self) -> dict:
+        """Gemessene Lautheit (LUFS) und aktueller Ausgleich (dB) fürs Anzeigen."""
+        m = self.lautheit.messwert
+        return {"lufs": None if m is None else round(m, 1),
+                "gain_db": round(self.lautheit.gain_db, 1) if self.normalize else 0.0}
 
 
 class Mixer:
@@ -91,9 +111,11 @@ class Mixer:
       master_to      Ziel des Masterpegels.
     """
 
-    def __init__(self, auto_level: bool = True):
-        self.deck_a = Deck(name="A")
-        self.deck_b = Deck(name="B")
+    def __init__(self, auto_level: bool = True, loudness_target: float = ZIEL_LUFS):
+        self.deck_a = Deck(name="A", normalize=auto_level,
+                           lautheit=Lautheit(loudness_target))
+        self.deck_b = Deck(name="B", normalize=auto_level,
+                           lautheit=Lautheit(loudness_target))
         # Einspielungen (Ansagen, Gong): eigenes Deck über dem Programm.
         self.deck_o = Deck(name="O")
         self.overlay_on = False
@@ -183,10 +205,6 @@ class Mixer:
         a = self.deck_a.read(frames) if gA > 1e-4 else silence(frames)
         b = self.deck_b.read(frames) if gB > 1e-4 else silence(frames)
 
-        if self.auto_level:
-            gA *= self._auto(self.deck_a)
-            gB *= self._auto(self.deck_b)
-
         mix = a * gA + b * gB
 
         # Etwas Senderrauschen, solange wir mitten im Überblenden sind –
@@ -219,15 +237,6 @@ class Mixer:
         mix = mix * env
 
         return self._limit(mix).astype(DTYPE)
-
-    def _auto(self, deck: Deck) -> float:
-        """Sanfte Auto-Normalisierung auf einen Zielpegel, stark gedämpft."""
-        target = 0.12
-        lvl = deck.level
-        if lvl < 1e-4:
-            return 1.0
-        g = target / lvl
-        return float(min(3.0, max(0.3, g)))
 
     def _limit(self, x: np.ndarray) -> np.ndarray:
         """Weicher Begrenzer: unterhalb der Schwelle linear, darüber tanh."""

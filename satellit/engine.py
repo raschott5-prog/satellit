@@ -45,6 +45,7 @@ import numpy as np
 
 from .audio import BLOCK, SAMPLE_RATE
 from .media import ensure_demo, resolve as media_resolve
+from .lautheit import ZIEL_LUFS, Merker
 from .mixer import Mixer
 from .scheduler import Scheduler
 from .sources import FUNK_KINDS, Source, make_source
@@ -62,7 +63,12 @@ IDLE_CLOSE_SECONDS = 15.0
 class Engine:
     def __init__(self, config, output=None):
         self.config = config
-        self.mixer = Mixer(auto_level=config.get("audio", "auto_level", default=True))
+        self.mixer = Mixer(
+            auto_level=config.get("audio", "auto_level", default=True),
+            loudness_target=float(config.get("audio", "loudness_target", default=ZIEL_LUFS)))
+        # gemessene Lautheit je Sender, damit der Pegel beim Umschalten sofort stimmt
+        self.merker = Merker(config.path.parent / "lautheit.json")
+        self._merker_gespeichert = time.time()
         self.mixer.noise_level = float(config.get("audio", "noise_level", default=0.006))
         vol = float(config.get("audio", "volume", default=0.5))
         self.mixer.volume = self.mixer.volume_to = vol
@@ -139,6 +145,7 @@ class Engine:
         self._end_oneshot(None, quiet=True)
         for s in list(self._sources.values()):
             s.stop()
+        self._lautheit_merken(jetzt_speichern=True)
         self.started = False
 
     def render(self, frames: int = BLOCK) -> np.ndarray:
@@ -473,6 +480,24 @@ class Engine:
         self._drive(desired)
         self._drive_master(desired)
         self._close_idle_sources()
+        self._lautheit_merken()
+
+    def _lautheit_an(self, key: Optional[str]) -> bool:
+        """Lautheitsangleich für diese Quelle? Ein Sender kann ihn mit
+        ``"loudness": false`` abwählen (Schlafradio, Naturklänge bleiben leise)."""
+        if not self.mixer.auto_level:
+            return False
+        sid = key.split(":", 1)[1] if key and key[:3] in ("st:", "fb:") else None
+        st = self.config.station(sid) if sid else None
+        return not (isinstance(st, dict) and st.get("loudness") is False)
+
+    def _lautheit_merken(self, jetzt_speichern: bool = False) -> None:
+        for deck in (self.mixer.deck_a, self.mixer.deck_b):
+            if deck.normalize and deck.key:
+                self.merker.set(deck.key, deck.lautheit.messwert)
+        if jetzt_speichern or time.time() - self._merker_gespeichert > 60.0:
+            self._merker_gespeichert = time.time()
+            self.merker.speichern()
 
     def _close_idle_sources(self) -> None:
         """Quellen schließen, die weder laufen, einblenden noch angefragt sind."""
@@ -558,9 +583,9 @@ class Engine:
                 and self._pending["source"] is desired["source"]:
             return
         standby = self.mixer.standby_deck()
-        standby.source = desired["source"]
-        standby.gain = 1.0
-        standby.label = desired["label"]
+        standby.assign(desired["source"], key=desired["key"], label=desired["label"],
+                       gemerkt=self.merker.get(desired["key"]),
+                       normalize=self._lautheit_an(desired["key"]))
         target = 1.0 if standby is self.mixer.deck_b else 0.0
         self._pending = {"source": desired["source"], "target": target,
                          "fade": desired["fade"], "label": desired["label"],
@@ -623,6 +648,9 @@ class Engine:
             "master": round(self.mixer.master, 3),
             "crossfade": round(self.mixer.crossfade, 3),
             "duck": round(self.mixer.duck, 3),
+            "loudness": {**self.mixer.active_deck().loudness,
+                         "target": self.mixer.deck_a.lautheit.ziel,
+                         "enabled": self.mixer.auto_level},
             "base": self.base, "manual": self.manual_active,
             "fallback_active": self.fallback_active,
             "pending": (self._pending or {}).get("label"),

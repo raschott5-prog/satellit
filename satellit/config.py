@@ -46,7 +46,8 @@ def default_config() -> dict[str, Any]:
                                      # ein Sender kann mit "fallback" einen eigenen haben
         "audio": {
             "device": None,          # None = Standardgerät
-            "auto_level": True,
+            "auto_level": True,      # Lautheitsangleich der Sender (EBU R128)
+            "loudness_target": -16.0,  # Zielwert in LUFS
             "volume": 0.5,           # bewusst zurückhaltend
             "crossfade_seconds": 4.0,
             "wake_seconds": 90.0,    # Weck-Einblendung über Minuten
