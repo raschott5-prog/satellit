@@ -18,7 +18,7 @@ services:
       args:
         FUNK: "0"          # "1" = KiwiSDR/UberSDR
         UEBERSETZER: "0"   # "1" = Whisper-Übersetzer (großes Image)
-    image: satellit:0.4.8
+    image: satellit:0.4.9
     container_name: satellit
     restart: unless-stopped
     user: "1000:1000"

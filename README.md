@@ -1,5 +1,7 @@
 # Satellit – virtuelles Weltempfänger-Radio
 
+[![Tests](https://github.com/raschott5-prog/satellit/actions/workflows/tests.yml/badge.svg)](https://github.com/raschott5-prog/satellit/actions/workflows/tests.yml)
+
 Ein Radio für den Schreibtisch oder die Küche, das sich anfühlt wie ein großer
 Weltempfänger – aber seine Sender aus dem Netz holt:
 
@@ -27,27 +29,49 @@ Weltempfänger – aber seine Sender aus dem Netz holt:
   nach EBU R128 und gleicht sie langsam auf einen Zielwert an
   (`audio.loudness_target`, Standard −16 LUFS) – vom Kurzwellen-Kiwi bis zum
   hochgezogenen Privatsender, ohne zu pumpen. Gemessene Werte merkt er sich je
-  Sender (`lautheit.json`), beim Umschalten stimmt der Pegel sofort. Abschalten:
+  Sender (`lautheit.json` neben der `config.json`), beim Umschalten stimmt der
+  Pegel sofort; Datei löschen = alles neu messen. Abschalten:
   `audio.auto_level: false`, für einzelne Sender `"loudness": false`.
 
 Bedienung im Browser unter `http://localhost:8080` – auf Windows, Linux und
 dem Raspberry Pi gleich.
 
-### Neu in 0.4
+## In 5 Minuten zum ersten Ton
 
-- **Grundgerät und Funk-Teil getrennt**, mit Schalter „Funk & Kurzwelle“
-  (siehe unten). Das Grundgerät kommt ohne Whisper, Websocket & Co. aus.
-- **WebSDR-Quelle** für die PA3FWM-WebSDR (Enschede, Hack Green, NA5B …),
-  über den unveränderten Original-Client im unsichtbaren Browser (Linux).
-- **Beispielsender** beim ersten Einschalten des Funk-Teils: Shannon VOLMET,
-  40 m aus Enschede, spanisches und koreanisches Lokalradio aus Washington,
-  spanisches aus Los Angeles. Zusammen mit dem Übersetzer zeigen sie die
-  Grundidee: Früher übersetzten Auslandsdienste ihr Programm für die Welt –
-  heute hört man das Lokalradio der Welt und übersetzt beim Hörer.
-- Wecken mit Naturklängen als Beispiel im Grundgerät (Ordner `voegel/`,
-  eine Stunde von ganz leise auf normal).
-- Fehlerhafte Sender (unvollständig, Funk-Teil aus) lösen jetzt sauber den
-  Ersatzbetrieb aus, statt still zu spielen.
+**Windows oder Mac:** Unter [Releases](https://github.com/raschott5-prog/satellit/releases)
+das Beta-Paket laden und entpacken. Voraussetzung ist Python 3.10 oder neuer
+([python.org](https://www.python.org/downloads/), unter Windows beim
+Installieren „Add python.exe to PATH“ ankreuzen). Dann `Satellit-starten.bat`
+(Windows) bzw. `Satellit starten.command` (Mac) doppelklicken – beim ersten Mal
+richtet sich Satellit ein (1–3 Minuten), danach öffnet sich der Browser.
+Genaueres steht in der `LIESMICH.txt` im Paket.
+
+**Linux oder Raspberry Pi:**
+
+```
+sudo apt install ffmpeg libportaudio2 python3-venv
+git clone https://github.com/raschott5-prog/satellit
+cd satellit
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+python -m satellit --mode program
+```
+
+Dann im Browser <http://localhost:8080> öffnen. Zum Ausprobieren ohne Internet
+liegt ein Gong im Medienordner; eigene Musik kommt in den Ordner `musik/`
+daneben. Einen eigenen Sender trägt man in der `config.json` ein (Ort siehe
+unten), z. B.
+`{"id": "wdr4", "name": "WDR 4", "kind": "stream", "url": "https://…/stream.mp3", "freq": 101.3}`.
+Alles Weitere – Fahrplan, Wecken, Funk-Teil, Container – steht weiter unten.
+
+### Was ist neu
+
+- **0.4.9** Schnellstart, `CHANGELOG.md`, automatische Tests bei GitHub
+- **0.4.8** Gleich laut auf allen Sendern (EBU R128), Container (Docker/Podman)
+- **0.4.6–0.4.7** Senderchronik, schneller zurück nach Abrissen
+- **0.4.0–0.4.5** Grundgerät und Funk-Teil getrennt, WebSDR, Beispiele und Klangstücke, HFCC-Winterfahrplan
+
+Alle Einzelheiten: [`CHANGELOG.md`](CHANGELOG.md).
 
 ### Grundgerät und Funk-Teil
 
@@ -364,6 +388,9 @@ UUID-Rotation**: Satellit nutzt eine feste UUID pro Installation und blendet
 vor Ablauf der Sitzungszeit weich auf eine andere Instanz/Quelle über.
 
 ## Tests
+
+Bei jedem Push laufen die Tests automatisch bei GitHub (Linux, Python 3.10–3.14,
+`.github/workflows/tests.yml`). Von Hand:
 
 ```
 python -m pytest tests

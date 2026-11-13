@@ -1,0 +1,28 @@
+# Tests bei jedem Push und Pull Request – ohne Netz, Soundkarte und Funk-Pakete
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: ffmpeg und PortAudio
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg libportaudio2
+      - name: Pakete
+        run: pip install numpy requests sounddevice pytest
+      - name: Tests
+        run: python -m pytest -q tests
