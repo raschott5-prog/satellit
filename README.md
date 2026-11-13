@@ -423,6 +423,9 @@ Mixer-Abgriff) mit einem Ersatz-Modell statt Whisper.
   oder direkt per HTTP) mit Umcodieren (Opus/MP3, Lautheits-Angleichung),
   für mehrere Räume oder schwache Leitungen. Siehe
   [`docs/idee-weitersenden.md`](docs/idee-weitersenden.md)
+- Zimmerboxen: ESP32 mit Lautsprecher, Signale per ESP-NOW und gemeinsamer
+  Uhr – Signal-Lieder im ganzen Haus zur selben Sekunde, ohne Netzlast.
+  Siehe [`docs/idee-espnow.md`](docs/idee-espnow.md)
 
 ## Lizenz
 
