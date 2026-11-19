@@ -50,6 +50,8 @@
   .vol{display:flex;align-items:center;gap:12px}
   input[type=range]{flex:1;accent-color:var(--accent);height:28px}
   .volnum{font-variant-numeric:tabular-nums;width:3.2em;text-align:right;font-weight:600}
+  .lo-name{width:6.5em;color:var(--muted);font-size:14px}
+  .lo-aus{opacity:.4;filter:grayscale(1);pointer-events:none}
   .mute{width:100%;margin-top:12px;padding:14px;font-size:18px;font-weight:600}
   .mute.on{background:var(--warn);border-color:var(--warn);color:#fff}
   .next-time{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -140,6 +142,16 @@
         <span class="volnum" id="volNum">–</span>
       </div>
       <button class="mute" id="mute">Stumm</button>
+    </section>
+    <section class="card" id="loKarte">
+      <h2>Lichtorgel</h2>
+      <div id="loRegler">
+        <div class="vol"><label class="lo-name" for="loHell">Helligkeit</label>
+          <input type="range" id="loHell" min="0" max="100" step="1"><span class="volnum" id="loHellN">–</span></div>
+        <div class="vol"><label class="lo-name" for="loStille">Schwelle</label>
+          <input type="range" id="loStille" min="-70" max="-20" step="1"><span class="volnum" id="loStilleN">–</span></div>
+      </div>
+      <div class="sub" id="loText">Optionales Zusatzgerät.</div>
     </section>
   </div>
 
@@ -347,9 +359,30 @@ async function tick(){
       + (fk.missing && fk.missing.length ? ' Es fehlen Zusatzpakete für: ' + fk.missing.join(', ') + '.' : '')
     : 'Für Technikfans: Kurzwellen-Empfänger im Internet, Übersetzer, Sendepläne. Für den normalen Betrieb nicht nötig.';
 
+  renderLichtorgel(st.lichtorgel);
   renderWeek(sc);
   $('#log').innerHTML = (st.log || []).slice(0, 15).map(l =>
     `<div><b>${esc(l.t.slice(7))}</b>${esc(l.text)}</div>`).join('') || '<div>—</div>';
+}
+
+// Lichtorgel (optional): ausgegraut, solange keine läuft
+const loZiehen = {};
+function renderLichtorgel(lo){
+  lo = lo || {aktiv:false};
+  $('#loRegler').classList.toggle('lo-aus', !lo.aktiv);
+  if (!lo.aktiv){ $('#loText').textContent = 'Keine Lichtorgel aktiv (optionales Zusatzgerät).'; return; }
+  if (!loZiehen.hell){ $('#loHell').value = lo.hell ?? 0; $('#loHellN').textContent = (lo.hell ?? '–') + '%'; }
+  if (!loZiehen.stille){ $('#loStille').value = lo.stille_db ?? -45; $('#loStilleN').textContent = (lo.stille_db ?? '–') + ' dB'; }
+  const p = lo.pegel_db;
+  $('#loText').textContent = lo.stumm ? 'Lichtorgel ist stummgeschaltet.'
+    : (p == null || p < -100) ? 'Unter der Schwelle nur Grundlicht.'
+    : `Pegel ${Math.round(p)} dB – ${p < lo.stille_db ? 'unter der Schwelle (Grundlicht)' : 'Lichtorgel reagiert'}`;
+}
+for (const [id, feld, einheit, key] of [['#loHell','hell','%','hell'], ['#loStille','stille_db',' dB','stille']]){
+  const el = $(id);
+  el.addEventListener('input', () => { loZiehen[key] = true; $(id + 'N').textContent = el.value + einheit; });
+  el.addEventListener('change', () => { api('/api/lichtorgel', {[feld]: +el.value})
+    .catch(() => {}).finally(() => setTimeout(() => loZiehen[key] = false, 1500)); });
 }
 
 // Bedienelemente

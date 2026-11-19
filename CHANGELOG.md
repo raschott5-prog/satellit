@@ -3,6 +3,15 @@
 Ausführliche Notizen mit Hintergrund stehen bei den
 [Releases](https://github.com/raschott5-prog/satellit/releases).
 
+## Unveröffentlicht
+
+- **Lichtorgel-Regler (optional):** Läuft die Lichtorgel (eigenes Zusatzprogramm),
+  zeigen beide Oberflächen Regler für Helligkeit und Schwelle (unter der Schwelle
+  nur Grundlicht) samt aktuellem Pegel. Ohne Lichtorgel sind sie ausgegraut.
+  Austausch über `status.json`/`regler.json` in `~/.config/lichtorgel`
+  (`satellit/lichtorgel.py`, API `POST /api/lichtorgel`, Zustand in `/api/state`).
+  Abschalten: `"lichtorgel": {"enabled": false}`.
+
 ## 0.4.9 – 2026-11-13
 
 - **Schnellstart** oben in der README („In 5 Minuten zum ersten Ton“) und eine

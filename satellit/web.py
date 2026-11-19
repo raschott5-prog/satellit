@@ -14,6 +14,8 @@ Zustand / Bedienung
   POST /api/back            zurück zum Programm (Wache verwerfen)
   POST /api/volume          {"value": 0..1}
   POST /api/mute            {"muted": true|false}
+  POST /api/lichtorgel      {"hell": 0..100} und/oder {"stille_db": -70..-20}
+                            (optionale Lichtorgel; Zustand steht in /api/state unter "lichtorgel")
   POST /api/play            {"files": [...], "label": "...", "mode": "duck"|"replace"}
                             oder {"entry": id} – Einspielung im Raum abspielen
   POST /api/oneshot/stop    laufende Einspielung stoppen, Warteschlange leeren
@@ -49,6 +51,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote
 
 from . import __version__
+from . import lichtorgel
 from .chronik import Chronik
 from .media import MAX_UPLOAD, list_media, resolve, safe_name
 from .output import list_devices
@@ -162,7 +165,9 @@ class _Handler(BaseHTTPRequestHandler):
         elif p.startswith("/media/"):
             self._file(resolve(self.config.media_dir, p[len("/media/"):]))
         elif p == "/api/state":
-            self._json(self.engine.state())
+            st = self.engine.state()
+            st["lichtorgel"] = lichtorgel.zustand(self.config.data)
+            self._json(st)
         elif p == "/api/config":
             self._json(self.config.data)
         elif p == "/api/media":
@@ -223,6 +228,14 @@ class _Handler(BaseHTTPRequestHandler):
         elif p == "/api/mute":
             eng.set_muted(bool(b.get("muted", True)))
             self._json({"ok": True, "muted": eng.mixer.muted})
+        elif p == "/api/lichtorgel":
+            if not lichtorgel.zustand(self.config.data)["aktiv"]:
+                self._json({"ok": False, "error": "Lichtorgel läuft nicht"}, 409)
+                return
+            try:
+                self._json({"ok": True, "regler": lichtorgel.setzen(self.config.data, b)})
+            except ValueError as ex:
+                self._json({"ok": False, "error": str(ex)}, 400)
         elif p == "/api/play":
             self._play(b)
         elif p == "/api/oneshot/stop":
