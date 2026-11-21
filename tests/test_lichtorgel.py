@@ -118,7 +118,7 @@ class _Cfg:
 def test_ausklang_verlauf_und_ende(tmp_path):
     _status(tmp_path, hell=80, stille_db=-40.0)
     cfg = _Cfg({"lichtorgel": {"dir": str(tmp_path)}})
-    t0 = time.time()
+    t0 = float(int(time.time()))   # ganze Sekunde: Rundung der Startzeit ändert nichts
     ak = lichtorgel.ausklang_starten(cfg, t0 + 3600, jetzt=t0)
     assert ak["von_hell"] == 80 and ak["nach_hell"] == lichtorgel.AUSKLANG_HELL
     assert lichtorgel.ausklang_werte(ak, t0) == (80, -40.0, False)

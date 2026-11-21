@@ -66,6 +66,7 @@ Alles Weitere – Fahrplan, Wecken, Funk-Teil, Container – steht weiter unten.
 
 ### Was ist neu
 
+- **0.5.0** Lichtorgel-Regler (Helligkeit, Schwelle) und „Ausklingen bis“ – optional, ausgegraut ohne Lichtorgel
 - **0.4.9** Schnellstart, `CHANGELOG.md`, automatische Tests bei GitHub
 - **0.4.8** Gleich laut auf allen Sendern (EBU R128), Container (Docker/Podman)
 - **0.4.6–0.4.7** Senderchronik, schneller zurück nach Abrissen
