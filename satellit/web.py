@@ -16,6 +16,8 @@ Zustand / Bedienung
   POST /api/mute            {"muted": true|false}
   POST /api/lichtorgel      {"hell": 0..100} und/oder {"stille_db": -70..-20}
                             (optionale Lichtorgel; Zustand steht in /api/state unter "lichtorgel")
+  POST /api/lichtorgel/ausklang  {"bis_t": unix-zeit[, "nach_hell": %]} bis dahin dunkler und
+                            unempfindlicher, am Ende nur Grundlicht; {"stop": true} bricht ab
   POST /api/play            {"files": [...], "label": "...", "mode": "duck"|"replace"}
                             oder {"entry": id} – Einspielung im Raum abspielen
   POST /api/oneshot/stop    laufende Einspielung stoppen, Warteschlange leeren
@@ -233,9 +235,21 @@ class _Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": "Lichtorgel läuft nicht"}, 409)
                 return
             try:
-                self._json({"ok": True, "regler": lichtorgel.setzen(self.config.data, b)})
+                regler = lichtorgel.setzen(self.config.data, b)
+                lichtorgel.ausklang_stoppen(self.config)   # Hand am Regler beendet das Ausklingen
+                self._json({"ok": True, "regler": regler})
             except ValueError as ex:
                 self._json({"ok": False, "error": str(ex)}, 400)
+        elif p == "/api/lichtorgel/ausklang":
+            if b.get("stop"):
+                lichtorgel.ausklang_stoppen(self.config)
+                self._json({"ok": True})
+                return
+            try:
+                ak = lichtorgel.ausklang_starten(self.config, b.get("bis_t"), b.get("nach_hell"))
+                self._json({"ok": True, "ausklang": ak})
+            except ValueError as ex:
+                self._json({"ok": False, "error": str(ex)}, 409 if "läuft nicht" in str(ex) else 400)
         elif p == "/api/play":
             self._play(b)
         elif p == "/api/oneshot/stop":

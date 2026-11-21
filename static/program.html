@@ -52,6 +52,7 @@
   .volnum{font-variant-numeric:tabular-nums;width:3.2em;text-align:right;font-weight:600}
   .lo-name{width:6.5em;color:var(--muted);font-size:14px}
   .lo-aus{opacity:.4;filter:grayscale(1);pointer-events:none}
+  input[type=time]{font:inherit;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 10px}
   .mute{width:100%;margin-top:12px;padding:14px;font-size:18px;font-weight:600}
   .mute.on{background:var(--warn);border-color:var(--warn);color:#fff}
   .next-time{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -149,7 +150,9 @@
         <div class="vol"><label class="lo-name" for="loHell">Helligkeit</label>
           <input type="range" id="loHell" min="0" max="100" step="1"><span class="volnum" id="loHellN">–</span></div>
         <div class="vol"><label class="lo-name" for="loStille">Schwelle</label>
-          <input type="range" id="loStille" min="-70" max="-20" step="1"><span class="volnum" id="loStilleN">–</span></div>
+          <input type="range" id="loStille" min="-70" max="0" step="1"><span class="volnum" id="loStilleN">–</span></div>
+        <div class="vol" style="margin-top:10px"><label class="lo-name" for="loBis">Ausklingen bis</label>
+          <input type="time" id="loBis" value="23:00"><button id="loAk">Start</button></div>
       </div>
       <div class="sub" id="loText">Optionales Zusatzgerät.</div>
     </section>
@@ -377,7 +380,26 @@ function renderLichtorgel(lo){
   $('#loText').textContent = lo.stumm ? 'Lichtorgel ist stummgeschaltet.'
     : (p == null || p < -100) ? 'Unter der Schwelle nur Grundlicht.'
     : `Pegel ${Math.round(p)} dB – ${p < lo.stille_db ? 'unter der Schwelle (Grundlicht)' : 'Lichtorgel reagiert'}`;
+  loAk = lo.ausklang || null;
+  $('#loAk').textContent = loAk ? 'Abbrechen' : 'Start';
+  $('#loBis').disabled = !!loAk;
+  if (loAk) $('#loText').textContent = loAkText(loAk);
 }
+let loAk = null;
+function loBisZeit(hhmm){   // nächstes Vorkommen der Uhrzeit (Browser-Zeit) als Unix-Sekunden
+  const [h,m]=hhmm.split(":").map(Number), d=new Date(); d.setHours(h,m,0,0);
+  if(d.getTime()<=Date.now()+60000) d.setDate(d.getDate()+1);
+  return Math.round(d.getTime()/1000);
+}
+function loAkText(ak){
+  const bis=new Date(ak.bis_t*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  const r=Math.ceil(ak.rest_s/60);
+  return `Klingt aus bis ${bis} (noch ${r>=60?Math.floor(r/60)+" h "+(r%60)+" min":r+" min"}): wird dunkler und unempfindlicher, am Ende nur Grundlicht.`;
+}
+$('#loAk').addEventListener('click', () => {
+  const b = loAk ? {stop: true} : {bis_t: loBisZeit($('#loBis').value || '23:00')};
+  api('/api/lichtorgel/ausklang', b).catch(() => {});
+});
 for (const [id, feld, einheit, key] of [['#loHell','hell','%','hell'], ['#loStille','stille_db',' dB','stille']]){
   const el = $(id);
   el.addEventListener('input', () => { loZiehen[key] = true; $(id + 'N').textContent = el.value + einheit; });

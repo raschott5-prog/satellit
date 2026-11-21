@@ -43,6 +43,7 @@ from typing import Optional
 
 import numpy as np
 
+from . import lichtorgel
 from .audio import BLOCK, SAMPLE_RATE
 from .media import ensure_demo, resolve as media_resolve
 from .lautheit import ZIEL_LUFS, Merker
@@ -476,6 +477,9 @@ class Engine:
             self.funk.tick()
 
         self._tick_oneshot()
+        if time.monotonic() >= getattr(self, "_lo_naechst", 0.0):
+            self._lo_naechst = time.monotonic() + 5.0
+            lichtorgel.ausklang_schritt(self.config)
         desired = self._resolve()
         self._drive(desired)
         self._drive_master(desired)

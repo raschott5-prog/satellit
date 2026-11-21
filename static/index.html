@@ -142,6 +142,8 @@ main{max-width:1180px;margin:0 auto;padding:24px 16px 60px}
 .hint{color:var(--muted);font-size:13px;margin:0 0 12px}
 .lo-reihe{display:grid;grid-template-columns:110px 1fr 70px;gap:10px;align-items:center;margin-bottom:12px}
 .lo-reihe input[type=range]{width:100%;accent-color:var(--accent)}
+.lo-reihe input[type=time]{background:#24272c;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit}
+.lo-reihe button{background:#24272c;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit}
 .lo-aus{opacity:.4;filter:grayscale(1);pointer-events:none}
 .status{font-size:13px;color:var(--muted)} .status.on{color:var(--ok)}
 select{background:#121316;color:var(--text);border:1px solid #3a3e46;border-radius:6px;padding:6px 8px;font:14px system-ui}
@@ -337,8 +339,11 @@ footer a{color:var(--accent)}
         <div class="lo-reihe"><label for="lo-hell">Helligkeit</label>
           <input type="range" id="lo-hell" min="0" max="100" step="1"><span id="lo-hell-n">–</span></div>
         <div class="lo-reihe"><label for="lo-stille">Schwelle</label>
-          <input type="range" id="lo-stille" min="-70" max="-20" step="1"><span id="lo-stille-n">–</span></div>
+          <input type="range" id="lo-stille" min="-70" max="0" step="1"><span id="lo-stille-n">–</span></div>
         <p class="hint" id="lo-pegel">Unter der Schwelle gilt es als Stille: dann nur Grundlicht, kein Flackern bei Rauschen.</p>
+        <div class="lo-reihe"><label for="lo-bis">Ausklingen bis</label>
+          <input type="time" id="lo-bis" value="23:00"><button id="lo-ak">Start</button></div>
+        <p class="hint" id="lo-ak-text">Bis zur Uhrzeit wird die Lichtorgel langsam dunkler und unempfindlicher, am Ende leuchtet nur noch das Grundlicht.</p>
       </div>
     </div>
   </section>
@@ -669,7 +674,27 @@ function renderLichtorgel(lo){
   const p=lo.pegel_db;
   $("#lo-pegel").textContent=(p==null||p<-100) ? "Pegel: –"
     : `Pegel jetzt ${p.toFixed(0)} dB → ${p<lo.stille_db?"unter der Schwelle (Grundlicht)":"über der Schwelle (Lichtorgel reagiert)"}`;
+  loAk=lo.ausklang||null;
+  $("#lo-ak").textContent=loAk?"Abbrechen":"Start";
+  $("#lo-bis").disabled=!!loAk;
+  $("#lo-ak-text").textContent=loAk?loAkText(loAk)
+    :"Bis zur Uhrzeit wird die Lichtorgel langsam dunkler und unempfindlicher, am Ende leuchtet nur noch das Grundlicht.";
 }
+let loAk=null;
+function loBisZeit(hhmm){   // nächstes Vorkommen der Uhrzeit (Browser-Zeit) als Unix-Sekunden
+  const [h,m]=hhmm.split(":").map(Number), d=new Date(); d.setHours(h,m,0,0);
+  if(d.getTime()<=Date.now()+60000) d.setDate(d.getDate()+1);
+  return Math.round(d.getTime()/1000);
+}
+function loAkText(ak){
+  const bis=new Date(ak.bis_t*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  const r=Math.ceil(ak.rest_s/60);
+  return `Klingt aus bis ${bis} (noch ${r>=60?Math.floor(r/60)+" h "+(r%60)+" min":r+" min"}): wird dunkler und unempfindlicher, am Ende nur Grundlicht.`;
+}
+$("#lo-ak").addEventListener("click",()=>{
+  const b=loAk?{stop:true}:{bis_t:loBisZeit($("#lo-bis").value||"23:00")};
+  api("/api/lichtorgel/ausklang",b).then(poll).catch(e=>toast(e.message));
+});
 for(const [id,feld,einheit,key] of [["#lo-hell","hell"," %","hell"],["#lo-stille","stille_db"," dB","stille"]]){
   const el=$(id);
   el.addEventListener("input",()=>{ loZiehen[key]=true; $(id+"-n").textContent=el.value+einheit; });
